@@ -108,6 +108,18 @@ const translations = {
         <p>Cada franja del perfil es un tramo del track objetivo, coloreado según el ritmo estimado para ese tramo comparado con tu ritmo llano equivalente: verde donde el modelo predice que irás más rápido que tu base (bajadas suaves, terreno favorable), gris donde el esfuerzo es similar al llano, y naranja/rojo en las subidas más exigentes, donde el ritmo se ralentiza más.</p>
         <p>Pasa el ratón por encima de cualquier punto del perfil para ver la pendiente, el ritmo estimado y el tiempo acumulado hasta ese punto exacto.</p>
       `,
+      keyPoints: {
+        title: `Puntos clave del recorrido`,
+        desc: `Fin de cada subida y bajada significativa (≥30 m de desnivel), con el ritmo de ese tramo y el tiempo estimado de paso por ese punto.`,
+        typeSummit: `Cima`,
+        typeValley: `Valle`,
+        thPoint: `Punto`,
+        thElevation: `Elevación`,
+        thLeg: `Desnivel del tramo`,
+        thPace: `Ritmo del tramo`,
+        thTime: `Tiempo estimado`,
+        legFormat: `{sign}{m}m en {km} km`
+      },
       thKm: `Km`,
       thPace: `Ritmo`,
       thSegTime: `Tiempo tramo`,
@@ -328,6 +340,18 @@ const translations = {
         <p>Cada franja del perfil és un tram del track objectiu, acolorida segons el ritme estimat per a aquell tram comparat amb el teu ritme pla equivalent: verd on el model prediu que aniràs més ràpid que la teva base (baixades suaus, terreny favorable), gris on l'esforç és similar al pla, i taronja/vermell a les pujades més exigents, on el ritme s'alenteix més.</p>
         <p>Passa el ratolí per sobre de qualsevol punt del perfil per veure el pendent, el ritme estimat i el temps acumulat fins a aquell punt exacte.</p>
       `,
+      keyPoints: {
+        title: `Punts clau del recorregut`,
+        desc: `Final de cada pujada i baixada significativa (≥30 m de desnivell), amb el ritme d'aquell tram i el temps estimat de pas per aquell punt.`,
+        typeSummit: `Cim`,
+        typeValley: `Vall`,
+        thPoint: `Punt`,
+        thElevation: `Elevació`,
+        thLeg: `Desnivell del tram`,
+        thPace: `Ritme del tram`,
+        thTime: `Temps estimat`,
+        legFormat: `{sign}{m}m en {km} km`
+      },
       thKm: `Km`,
       thPace: `Ritme`,
       thSegTime: `Temps tram`,
@@ -548,6 +572,18 @@ const translations = {
         <p>Each band on the profile is a segment of the target track, colored according to that segment's estimated pace compared to your flat-equivalent pace: green where the model predicts you'll go faster than your base pace (gentle downhills, favorable terrain), gray where the effort is similar to flat ground, and orange/red on the most demanding climbs, where pace slows down the most.</p>
         <p>Hover over any point on the profile to see the grade, estimated pace, and elapsed time up to that exact point.</p>
       `,
+      keyPoints: {
+        title: `Key points on the route`,
+        desc: `The end of each significant climb and descent (≥30 m of elevation change), with that segment's pace and the estimated time you'd pass through that point.`,
+        typeSummit: `Summit`,
+        typeValley: `Valley`,
+        thPoint: `Point`,
+        thElevation: `Elevation`,
+        thLeg: `Segment elevation change`,
+        thPace: `Segment pace`,
+        thTime: `Estimated time`,
+        legFormat: `{sign}{m}m over {km} km`
+      },
       thKm: `Km`,
       thPace: `Pace`,
       thSegTime: `Segment time`,

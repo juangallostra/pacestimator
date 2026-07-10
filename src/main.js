@@ -133,6 +133,7 @@ function buildWindowedSegments(rawSegs, windowM, needPace){
 let baselinePaceSecPerKm = null;
 let GRADE_BIN_SIZE = 0.02; // width of each grade "bin" (2% default) — configurable in the UI
 let GRADE_WINDOW_M = 20; // linear-distance window (meters) used to compute grade itself — configurable in the UI
+const KEY_POINT_MIN_ELEVATION_M = 30; // minimum prominence for a summit/valley to count as an "emblematic" point
 let gradeSegments = []; // {grade, actualPaceSecPerKm, dist} — derived from trainingFiles
 let usedActivities = []; // {name, dist} — derived from trainingFiles
 let trainingFiles = []; // {id, name, dist, gainUp, segments} — source of truth for step 1
@@ -664,8 +665,86 @@ function computeAndRenderResults(){
   document.getElementById('resultDist').textContent = (targetTrack.totalDist/1000).toFixed(1)+' km · D+'+Math.round(targetTrack.gainUp)+'m · D-'+Math.round(targetTrack.gainDown)+'m';
 
   renderProfileChart(segments, riegelFactor);
+  renderKeyPointsTable(targetTrack.points, segments, riegelFactor);
   renderSplitsTable(segments, riegelFactor);
   renderConfidence(computeConfidence(segments, riegelFactor));
+}
+
+// Single-pass "zigzag" scan: walks the elevation profile tracking a running
+// extreme, and commits it as a summit/valley pivot once the profile reverses
+// by at least `thresholdM` from it. Filters GPS/altimeter noise so only
+// genuinely significant climbs/descents show up, not every wiggle.
+function detectKeyElevationPoints(points, thresholdM){
+  const pivots = [];
+  if(points.length < 2) return pivots;
+
+  let curExtIdx = 0, curExtType = null, lastPivotIdx = 0;
+  for(let i=1;i<points.length;i++){
+    const e = points[i].ele;
+
+    if(curExtType===null){
+      if(e > points[lastPivotIdx].ele){ curExtType='max'; curExtIdx=i; }
+      else if(e < points[lastPivotIdx].ele){ curExtType='min'; curExtIdx=i; }
+      continue;
+    }
+
+    const extEle = points[curExtIdx].ele;
+    if(curExtType==='max'){
+      if(e > extEle){ curExtIdx=i; }
+      else if(extEle - e >= thresholdM){
+        pivots.push({idx: curExtIdx, type: 'summit'});
+        lastPivotIdx = curExtIdx; curExtType='min'; curExtIdx=i;
+      }
+    }else{
+      if(e < extEle){ curExtIdx=i; }
+      else if(e - extEle >= thresholdM){
+        pivots.push({idx: curExtIdx, type: 'valley'});
+        lastPivotIdx = curExtIdx; curExtType='max'; curExtIdx=i;
+      }
+    }
+  }
+  return pivots;
+}
+
+// Finds the estimated (pre-Riegel) cumulative time at a given distance along
+// the target track, using the same windowed segments as the splits table.
+function cumTimeAtDist(segments, dist){
+  for(const s of segments){ if(s.distEnd >= dist) return s.cumTime; }
+  return segments.length ? segments[segments.length-1].cumTime : 0;
+}
+
+function buildKeyPointsRows(points, segments, riegelFactor){
+  const pivots = detectKeyElevationPoints(points, KEY_POINT_MIN_ELEVATION_M);
+  const rows = [];
+  let prevIdx = 0, prevTime = 0;
+  for(const p of pivots){
+    const dist = points[p.idx].dist;
+    const ele = points[p.idx].ele;
+    const legDist = dist - points[prevIdx].dist;
+    const legEleChange = ele - points[prevIdx].ele;
+    const cumTime = cumTimeAtDist(segments, dist) * riegelFactor;
+    const legPace = legDist>0 ? ((cumTime-prevTime)/legDist)*1000 : null;
+    rows.push({type: p.type, dist, ele, legDist, legEleChange, cumTime, legPace});
+    prevIdx = p.idx; prevTime = cumTime;
+  }
+  return rows;
+}
+
+function renderKeyPointsTable(points, segments, riegelFactor){
+  const wrap = document.getElementById('keyPointsWrap');
+  const rows = buildKeyPointsRows(points, segments, riegelFactor);
+  if(rows.length===0){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+
+  document.getElementById('keyPointsBody').innerHTML = rows.map(r=>{
+    const typeLabel = r.type==='summit' ? t('step3.keyPoints.typeSummit') : t('step3.keyPoints.typeValley');
+    const legStr = t('step3.keyPoints.legFormat', {sign: r.legEleChange>=0?'+':'', m: Math.round(r.legEleChange), km: (r.legDist/1000).toFixed(1)});
+    const legClass = r.legEleChange>=0 ? 'grade-up' : 'grade-down';
+    return '<tr><td>'+(r.dist/1000).toFixed(1)+'</td><td>'+typeLabel+'</td><td>'+Math.round(r.ele)+' m</td>'
+      + '<td class="'+legClass+'">'+legStr+'</td>'
+      + '<td>'+(r.legPace!==null ? fmtPace(r.legPace)+'/km' : '–')+'</td>'
+      + '<td>'+fmtTime(r.cumTime)+'</td></tr>';
+  }).join('');
 }
 
 function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
