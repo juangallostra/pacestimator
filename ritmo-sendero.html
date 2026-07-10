@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ritmo de Sendero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121613;
+    --bg-alt:#0d100e;
+    --panel:#1b211d;
+    --panel-2:#212823;
+    --line:#2c342e;
+    --moss:#7fa66c;
+    --moss-dim:#5c7d4f;
+    --ochre:#c98a3b;
+    --ochre-dim:#96682e;
+    --ember:#c9613f;
+    --text:#eae7dd;
+    --text-muted:#8a9489;
+    --text-faint:#5b645a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(127,166,108,0.06), transparent 45%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 34px);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    line-height:1.5;
+    padding:0 0 80px 0;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px;}
+  header{padding:48px 0 28px 0; border-bottom:1px solid var(--line);}
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--moss);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{content:"";width:16px;height:1px;background:var(--moss);display:inline-block;}
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:38px;
+    margin:10px 0 8px 0;
+    letter-spacing:-0.01em;
+  }
+  .sub{color:var(--text-muted); font-size:15px; max-width:560px;}
+  section{padding:36px 0; border-bottom:1px solid var(--line);}
+  .step-tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-faint);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:20px;
+    font-weight:600;
+    margin:0 0 4px 0;
+  }
+  .desc{color:var(--text-muted); font-size:14px; margin:0 0 20px 0; max-width:600px;}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  input[type=password], input[type=text]{
+    flex:1;
+    min-width:220px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    padding:12px 14px;
+    border-radius:6px;
+    outline:none;
+  }
+  input:focus{border-color:var(--moss-dim);}
+  button{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    background:var(--moss);
+    color:#0d130e;
+    border:none;
+    padding:12px 20px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:filter 0.15s ease;
+  }
+  button:hover{filter:brightness(1.12);}
+  button:disabled{background:var(--panel-2); color:var(--text-faint); cursor:not-allowed;}
+  button.secondary{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text-muted);
+  }
+  button.secondary:hover{border-color:var(--moss-dim); color:var(--text);}
+  .hint{font-size:12px; color:var(--text-faint); margin-top:8px;}
+  .hint a{color:var(--moss); text-decoration:none;}
+  .hint a:hover{text-decoration:underline;}
+  .status{font-family:'JetBrains Mono', monospace; font-size:12px; margin-top:10px; min-height:16px;}
+  .status.err{color:var(--ember);}
+  .status.ok{color:var(--moss);}
+  .status.pending{color:var(--ochre);}
+
+  .activity-list{margin-top:18px; display:flex; flex-direction:column; gap:6px;}
+  .activity-row{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:10px 14px; font-size:13px;
+  }
+  .activity-row .name{color:var(--text);}
+  .activity-row .meta{color:var(--text-faint); font-family:'JetBrains Mono', monospace; font-size:12px;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:22px;}
+  .stat{background:var(--panel); padding:18px 18px;}
+  .stat .label{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em;}
+  .stat .value{font-family:'Space Grotesk', sans-serif; font-size:26px; font-weight:600; margin-top:6px; color:var(--text);}
+  .stat .value span{font-size:14px; color:var(--text-muted); font-weight:500;}
+
+  .dropzone{
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    padding:34px 20px;
+    text-align:center;
+    color:var(--text-muted);
+    font-size:14px;
+    cursor:pointer;
+    transition:border-color 0.15s, background 0.15s;
+  }
+  .dropzone:hover, .dropzone.drag{border-color:var(--moss-dim); background:rgba(127,166,108,0.04);}
+  .dropzone strong{color:var(--text);}
+
+  svg{width:100%; height:auto; display:block;}
+  .chart-wrap{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:20px; margin-top:20px;}
+  .chart-title{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-muted); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.06em;}
+  .legend{display:flex; gap:18px; margin-top:12px; font-size:12px; color:var(--text-faint); font-family:'JetBrains Mono', monospace;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .legend i{width:10px; height:10px; border-radius:2px; display:inline-block;}
+
+  .tooltip{
+    position:absolute; pointer-events:none; background:#0a0d0b; border:1px solid var(--line);
+    border-radius:6px; padding:8px 10px; font-family:'JetBrains Mono', monospace; font-size:11px;
+    color:var(--text); white-space:nowrap; opacity:0; transition:opacity 0.1s; z-index:10;
+  }
+
+  table{width:100%; border-collapse:collapse; margin-top:20px; font-size:13px;}
+  th{
+    text-align:left; font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.05em; color:var(--text-faint); padding:8px 10px; border-bottom:1px solid var(--line);
+  }
+  td{padding:8px 10px; border-bottom:1px solid rgba(44,52,46,0.5); font-family:'JetBrains Mono', monospace; color:var(--text);}
+  tr:hover td{background:rgba(255,255,255,0.015);}
+  .grade-up{color:var(--ochre);}
+  .grade-down{color:var(--moss);}
+
+  .result-hero{
+    background:linear-gradient(135deg, rgba(127,166,108,0.08), rgba(201,138,59,0.05));
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:28px;
+    margin-top:20px;
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:24px;
+  }
+  .result-hero .big{font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:44px; color:var(--text);}
+  .result-hero .big span{font-size:16px; color:var(--text-muted); font-weight:500; margin-left:6px;}
+  .result-hero .label{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;}
+
+  .footnote{font-size:12px; color:var(--text-faint); margin-top:16px; max-width:640px; line-height:1.6;}
+  .badge{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-size:10px; background:var(--panel-2);
+    border:1px solid var(--line); color:var(--text-faint); padding:2px 7px; border-radius:4px; margin-left:8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Ritmo de Sendero</div>
+    <h1>Estimador de ritmo por desnivel</h1>
+    <div class="sub">Calcula tu ritmo equivalente en llano a partir de tus últimos entrenos de Strava y lo aplica al perfil de un track objetivo, tramo a tramo.</div>
+  </header>
+
+  <!-- STEP 1: TOKEN + STRAVA -->
+  <section>
+    <div class="step-tag">Paso 1</div>
+    <h2>Conecta tus entrenos</h2>
+    <p class="desc">Pega tu access token de Strava. Las peticiones se hacen directamente desde tu navegador a la API de Strava — el token no pasa por ningún servidor intermedio.</p>
+    <div class="row">
+      <input type="password" id="tokenInput" placeholder="Access token de Strava (ej. a1b2c3d4...)">
+      <button id="loadBtn">Cargar entrenos</button>
+    </div>
+    <div class="hint">¿No tienes token? Ve a <a href="https://www.strava.com/settings/api" target="_blank">strava.com/settings/api</a>, crea una app y copia "Your Access Token" (caduca en unas horas — si expira, vuelve a copiarlo). Necesita scope <code>activity:read_all</code>.</div>
+    <div class="status" id="loadStatus"></div>
+    <div class="activity-list" id="activityList"></div>
+
+    <div class="stat-grid" id="baselineStats" style="display:none;">
+      <div class="stat">
+        <div class="label">Ritmo llano equivalente</div>
+        <div class="value" id="statBaseline">–</div>
+      </div>
+      <div class="stat">
+        <div class="label">Entrenos analizados</div>
+        <div class="value" id="statRuns">–</div>
+      </div>
+      <div class="stat">
+        <div class="label">Distancia analizada</div>
+        <div class="value" id="statDist">–</div>
+      </div>
+      <div class="stat">
+        <div class="label">Tirada más larga</div>
+        <div class="value" id="statLongest">–</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="gapChartWrap" style="display:none;">
+      <div class="chart-title">Tu curva de esfuerzo — ritmo real vs. pendiente</div>
+      <div id="gapChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--moss);"></i>Ritmo observado por tramo (mediana por bin de pendiente)</span>
+        <span><i style="background:var(--ochre);"></i>Modelo (coste metabólico de Minetti)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: GPX -->
+  <section>
+    <div class="step-tag">Paso 2</div>
+    <h2>Sube el track objetivo</h2>
+    <p class="desc">El GPX de la carrera o ruta que quieres estimar. Se procesa entero en tu navegador.</p>
+    <div class="dropzone" id="dropzone">
+      <div><strong>Arrastra tu archivo .gpx aquí</strong> o haz clic para seleccionarlo</div>
+      <input type="file" id="gpxInput" accept=".gpx" style="display:none;">
+    </div>
+    <div class="status" id="gpxStatus"></div>
+  </section>
+
+  <!-- STEP 3: RESULTS -->
+  <section id="resultsSection" style="display:none;">
+    <div class="step-tag">Paso 3</div>
+    <h2>Estimación</h2>
+    <p class="desc">Ritmo y tiempo estimados aplicando tu curva de esfuerzo al perfil del track objetivo.</p>
+
+    <div class="result-hero">
+      <div>
+        <div class="label">Tiempo estimado</div>
+        <div class="big" id="resultTime">–</div>
+      </div>
+      <div>
+        <div class="label">Ritmo medio</div>
+        <div class="big" id="resultPace">–<span>/km</span></div>
+      </div>
+      <div>
+        <div class="label">Distancia · D+ · D-</div>
+        <div class="big" id="resultDist" style="font-size:24px; margin-top:10px;">–</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Perfil de elevación — color = intensidad estimada</div>
+      <div id="profileChart" style="position:relative;"></div>
+      <div class="legend">
+        <span><i style="background:var(--moss);"></i>Más rápido que tu ritmo base</span>
+        <span><i style="background:var(--text-muted);"></i>≈ ritmo base</span>
+        <span><i style="background:var(--ochre);"></i>Más lento (subida exigente)</span>
+      </div>
+    </div>
+
+    <table id="splitsTable">
+      <thead>
+        <tr><th>Km</th><th>Ritmo</th><th>Tiempo tramo</th><th>Acumulado</th><th>D+</th><th>Pend. media</th></tr>
+      </thead>
+      <tbody id="splitsBody"></tbody>
+    </table>
+
+    <div class="footnote" id="riegelNote"></div>
+    <div class="footnote">Es una estimación fisiológica (modelo de Minetti, 2002), no una predicción exacta: no tiene en cuenta terreno técnico, nutrición, clima del día de carrera ni tu estado de forma puntual.</div>
+  </section>
+
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ---------- Minetti metabolic cost model ----------
+// C(i) in J/kg/m, i = grade as fraction (-0.45 to 0.45)
+function minettiCost(i){
+  i = Math.max(-0.45, Math.min(0.45, i));
+  return 155.4*Math.pow(i,5) - 30.4*Math.pow(i,4) - 43.3*Math.pow(i,3) + 46.3*Math.pow(i,2) + 19.5*i + 3.6;
+}
+const C0 = minettiCost(0);
+
+function haversine(lat1, lon1, lat2, lon2){
+  const R = 6371000;
+  const toRad = d => d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+
+function fmtPace(secPerKm){
+  if(!isFinite(secPerKm) || secPerKm<=0) return '–';
+  const m = Math.floor(secPerKm/60);
+  const s = Math.round(secPerKm%60);
+  return m+':'+String(s).padStart(2,'0');
+}
+function fmtTime(totalSec){
+  totalSec = Math.round(totalSec);
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  if(h>0) return h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
+  return m+'m '+String(s).padStart(2,'0')+'s';
+}
+
+// ---------- STATE ----------
+let baselinePaceSecPerKm = null;
+let gradeSegments = []; // {grade, actualPaceSecPerKm, dist}
+let usedActivities = [];
+let targetTrack = null; // {points:[{dist,ele}], totalDist, gainUp, gainDown}
+
+// ---------- STEP 1: STRAVA ----------
+const loadBtn = document.getElementById('loadBtn');
+const loadStatus = document.getElementById('loadStatus');
+const activityListEl = document.getElementById('activityList');
+
+loadBtn.addEventListener('click', loadStravaData);
+
+async function loadStravaData(){
+  const token = document.getElementById('tokenInput').value.trim();
+  if(!token){ setStatus(loadStatus, 'Pega tu access token primero.', 'err'); return; }
+  loadBtn.disabled = true;
+  setStatus(loadStatus, 'Consultando tus actividades recientes...', 'pending');
+  activityListEl.innerHTML = '';
+  gradeSegments = [];
+  usedActivities = [];
+
+  try{
+    const res = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=15', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if(!res.ok){
+      if(res.status===401) throw new Error('Token inválido o caducado. Copia uno nuevo desde strava.com/settings/api.');
+      throw new Error('Strava respondió con error ' + res.status);
+    }
+    const activities = await res.json();
+    const runs = activities.filter(a => a.type === 'Run' || a.type === 'TrailRun').slice(0, 8);
+    if(runs.length===0){ setStatus(loadStatus, 'No se encontraron carreras a pie recientes en tu cuenta.', 'err'); loadBtn.disabled=false; return; }
+
+    setStatus(loadStatus, 'Descargando perfiles de elevación de ' + runs.length + ' entrenos...', 'pending');
+
+    let processed = 0;
+    for(const act of runs){
+      try{
+        const sRes = await fetch('https://www.strava.com/api/v3/activities/'+act.id+'/streams?keys=distance,altitude,time&key_by_type=true', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if(!sRes.ok) continue;
+        const streams = await sRes.json();
+        if(!streams.distance || !streams.altitude || !streams.time) continue;
+        const dist = streams.distance.data, alt = smoothArray(streams.altitude.data, 5), time = streams.time.data;
+        let segCount = 0;
+        for(let i=1;i<dist.length;i++){
+          const dDist = dist[i]-dist[i-1];
+          const dTime = time[i]-time[i-1];
+          const dEle = alt[i]-alt[i-1];
+          if(dDist < 3 || dTime <= 0) continue;
+          const grade = dEle/dDist;
+          const actualPace = (dTime/dDist)*1000; // sec per km
+          if(actualPace < 120 || actualPace > 1200) continue; // filter stops/noise (2:00-20:00/km)
+          gradeSegments.push({grade, actualPaceSecPerKm: actualPace, dist: dDist});
+          segCount++;
+        }
+        if(segCount>0){
+          usedActivities.push({name:act.name, dist:act.distance, id:act.id});
+          const row = document.createElement('div');
+          row.className='activity-row';
+          row.innerHTML = '<span class="name">'+escapeHtml(act.name)+'</span><span class="meta">'+(act.distance/1000).toFixed(1)+' km · D+'+Math.round(act.total_elevation_gain||0)+'m</span>';
+          activityListEl.appendChild(row);
+        }
+      }catch(e){ /* skip this activity's streams on error */ }
+      processed++;
+      setStatus(loadStatus, 'Procesando entrenos... ('+processed+'/'+runs.length+')', 'pending');
+    }
+
+    if(gradeSegments.length < 20){
+      setStatus(loadStatus, 'Muy pocos datos de desnivel disponibles. Prueba con una cuenta con más entrenos con GPS.', 'err');
+      loadBtn.disabled=false;
+      return;
+    }
+
+    computeBaseline();
+    renderGapChart();
+    setStatus(loadStatus, 'Listo — '+usedActivities.length+' entrenos analizados, '+gradeSegments.length+' tramos.', 'ok');
+  }catch(err){
+    setStatus(loadStatus, err.message.includes('Failed to fetch') ? 'No se pudo conectar con Strava (revisa el token o tu conexión).' : err.message, 'err');
+  }
+  loadBtn.disabled = false;
+  maybeShowResults();
+}
+
+function smoothArray(arr, window){
+  const out = [];
+  const half = Math.floor(window/2);
+  for(let i=0;i<arr.length;i++){
+    let sum=0,count=0;
+    for(let j=Math.max(0,i-half); j<=Math.min(arr.length-1,i+half); j++){ sum+=arr[j]; count++; }
+    out.push(sum/count);
+  }
+  return out;
+}
+
+function computeBaseline(){
+  let weightedSum = 0, weightTotal = 0;
+  for(const seg of gradeSegments){
+    const flatEquivPace = seg.actualPaceSecPerKm * (C0 / minettiCost(seg.grade));
+    weightedSum += flatEquivPace * seg.dist;
+    weightTotal += seg.dist;
+  }
+  baselinePaceSecPerKm = weightedSum / weightTotal;
+
+  document.getElementById('baselineStats').style.display='grid';
+  document.getElementById('statBaseline').innerHTML = fmtPace(baselinePaceSecPerKm)+' <span>/km</span>';
+  document.getElementById('statRuns').textContent = usedActivities.length;
+  document.getElementById('statDist').innerHTML = (weightTotal/1000).toFixed(1)+' <span>km</span>';
+  const longest = Math.max(...usedActivities.map(a=>a.dist));
+  document.getElementById('statLongest').innerHTML = (longest/1000).toFixed(1)+' <span>km</span>';
+}
+
+function renderGapChart(){
+  const wrap = document.getElementById('gapChartWrap');
+  wrap.style.display='block';
+  const W=860,H=280,padL=54,padR=20,padT=14,padB=36;
+
+  // bin observed segments by grade
+  const binSize = 0.02; // 2%
+  const bins = {};
+  for(const seg of gradeSegments){
+    const g = Math.max(-0.30, Math.min(0.30, seg.grade));
+    const key = Math.round(g/binSize);
+    if(!bins[key]) bins[key]=[];
+    bins[key].push(seg.actualPaceSecPerKm);
+  }
+  const binPoints = Object.keys(bins).map(k=>{
+    const arr = bins[k].sort((a,b)=>a-b);
+    const median = arr[Math.floor(arr.length/2)];
+    return {grade: parseInt(k)*binSize, pace: median, n: arr.length};
+  }).filter(p=>p.n>=3).sort((a,b)=>a.grade-b.grade);
+
+  const gMin=-0.30, gMax=0.30;
+  const paceVals = binPoints.map(p=>p.pace);
+  const modelVals = [];
+  for(let g=gMin; g<=gMax+1e-9; g+=0.01){ modelVals.push(baselinePaceSecPerKm * minettiCost(g)/C0); }
+  const pMin = Math.min(...paceVals, ...modelVals)*0.92;
+  const pMax = Math.max(...paceVals, ...modelVals)*1.08;
+
+  const x = g => padL + (g-gMin)/(gMax-gMin) * (W-padL-padR);
+  const y = p => padT + (1 - (p-pMin)/(pMax-pMin)) * (H-padT-padB);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  // grid
+  for(let g=-0.3; g<=0.3+1e-9; g+=0.1){
+    svg += `<line x1="${x(g)}" y1="${padT}" x2="${x(g)}" y2="${H-padB}" stroke="#2c342e" stroke-width="1"/>`;
+    svg += `<text x="${x(g)}" y="${H-padB+18}" fill="#5b645a" font-size="11" font-family="JetBrains Mono" text-anchor="middle">${Math.round(g*100)}%</text>`;
+  }
+  svg += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#2c342e"/>`;
+
+  // model curve
+  let modelPath='';
+  let gi=0;
+  for(let g=gMin; g<=gMax+1e-9; g+=0.01, gi++){
+    const p = baselinePaceSecPerKm * minettiCost(g)/C0;
+    modelPath += (gi===0?'M':'L') + x(g).toFixed(1) + ' ' + y(p).toFixed(1) + ' ';
+  }
+  svg += `<path d="${modelPath}" fill="none" stroke="#c98a3b" stroke-width="2.5"/>`;
+
+  // observed points
+  for(const p of binPoints){
+    svg += `<circle cx="${x(p.grade).toFixed(1)}" cy="${y(p.pace).toFixed(1)}" r="${Math.min(3+p.n*0.3,8)}" fill="#7fa66c" fill-opacity="0.75"/>`;
+  }
+
+  svg += `</svg>`;
+  document.getElementById('gapChart').innerHTML = svg;
+}
+
+function setStatus(el, msg, cls){ el.className='status '+(cls||''); el.textContent = msg; }
+function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ---------- STEP 2: GPX ----------
+const dropzone = document.getElementById('dropzone');
+const gpxInput = document.getElementById('gpxInput');
+const gpxStatus = document.getElementById('gpxStatus');
+
+dropzone.addEventListener('click', ()=>gpxInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files.length) handleGpxFile(e.dataTransfer.files[0]);
+});
+gpxInput.addEventListener('change', e=>{ if(e.target.files.length) handleGpxFile(e.target.files[0]); });
+
+function handleGpxFile(file){
+  setStatus(gpxStatus, 'Leyendo '+file.name+'...', 'pending');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const track = parseGpx(e.target.result);
+      targetTrack = track;
+      setStatus(gpxStatus, 'Track cargado: '+(track.totalDist/1000).toFixed(1)+' km, D+'+Math.round(track.gainUp)+'m, D-'+Math.round(track.gainDown)+'m.', 'ok');
+      maybeShowResults();
+    }catch(err){
+      setStatus(gpxStatus, 'No se pudo leer el GPX: '+err.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseGpx(text){
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error('archivo XML inválido');
+  const trkpts = Array.from(doc.querySelectorAll('trkpt'));
+  if(trkpts.length < 2) throw new Error('el track no tiene suficientes puntos');
+
+  const raw = trkpts.map(pt=>({
+    lat: parseFloat(pt.getAttribute('lat')),
+    lon: parseFloat(pt.getAttribute('lon')),
+    ele: parseFloat(pt.querySelector('ele') ? pt.querySelector('ele').textContent : '0')
+  }));
+
+  const smoothedEle = smoothArray(raw.map(p=>p.ele), 5);
+
+  let cumDist = 0, gainUp=0, gainDown=0;
+  const points = [{dist:0, ele: smoothedEle[0]}];
+  for(let i=1;i<raw.length;i++){
+    const d = haversine(raw[i-1].lat, raw[i-1].lon, raw[i].lat, raw[i].lon);
+    if(d < 1) continue; // skip near-duplicate points
+    cumDist += d;
+    const dEle = smoothedEle[i]-smoothedEle[i-1];
+    if(dEle>0) gainUp+=dEle; else gainDown+=-dEle;
+    points.push({dist: cumDist, ele: smoothedEle[i]});
+  }
+  return { points, totalDist: cumDist, gainUp, gainDown };
+}
+
+// ---------- STEP 3: RESULTS ----------
+function maybeShowResults(){
+  if(baselinePaceSecPerKm && targetTrack){
+    computeAndRenderResults();
+  }
+}
+
+function computeAndRenderResults(){
+  const pts = targetTrack.points;
+  const segments = []; // {distStart, distEnd, grade, pace, time}
+  let cumTime = 0;
+  for(let i=1;i<pts.length;i++){
+    const dDist = pts[i].dist - pts[i-1].dist;
+    if(dDist<=0) continue;
+    const grade = (pts[i].ele - pts[i-1].ele) / dDist;
+    const pace = baselinePaceSecPerKm * (minettiCost(grade)/C0); // sec per km
+    const segTime = (pace/1000) * dDist;
+    cumTime += segTime;
+    segments.push({distStart: pts[i-1].dist, distEnd: pts[i].dist, ele: pts[i].ele, grade, pace, segTime, cumTime, cumDist: pts[i].dist});
+  }
+
+  // Riegel-style endurance correction for long races beyond tested distance
+  const longestTested = usedActivities.length ? Math.max(...usedActivities.map(a=>a.dist)) : targetTrack.totalDist;
+  let riegelFactor = 1;
+  let riegelText = '';
+  if(targetTrack.totalDist > longestTested * 1.15){
+    riegelFactor = Math.pow(targetTrack.totalDist/longestTested, 0.06);
+    riegelText = 'La distancia objetivo ('+(targetTrack.totalDist/1000).toFixed(1)+' km) supera tu tirada más larga analizada ('+(longestTested/1000).toFixed(1)+' km), así que se aplicó un factor de fatiga adicional de '+riegelFactor.toFixed(3)+'x (escalado tipo Riegel, exponente 1.06) sobre el tiempo total.';
+  } else {
+    riegelText = 'La distancia objetivo está dentro del rango de tus tiradas analizadas, no se aplicó corrección de fatiga adicional.';
+  }
+  document.getElementById('riegelNote').textContent = riegelText;
+
+  const totalTime = cumTime * riegelFactor;
+  const avgPace = (totalTime/targetTrack.totalDist)*1000;
+
+  document.getElementById('resultsSection').style.display='block';
+  document.getElementById('resultTime').textContent = fmtTime(totalTime);
+  document.getElementById('resultPace').innerHTML = fmtPace(avgPace)+'<span>/km</span>';
+  document.getElementById('resultDist').textContent = (targetTrack.totalDist/1000).toFixed(1)+' km · D+'+Math.round(targetTrack.gainUp)+'m · D-'+Math.round(targetTrack.gainDown)+'m';
+
+  renderProfileChart(segments, riegelFactor);
+  renderSplitsTable(segments, riegelFactor);
+}
+
+function paceColor(pace, baseline){
+  const ratio = pace/baseline;
+  // ratio <1 => faster (moss), ~1 neutral, >1 slower (ochre/ember)
+  if(ratio < 0.95) return '#7fa66c';
+  if(ratio < 1.05) return '#8a9489';
+  if(ratio < 1.35) return '#c98a3b';
+  return '#c9613f';
+}
+
+function renderProfileChart(segments, riegelFactor){
+  const W=860,H=260,padL=50,padR=20,padT=16,padB=30;
+  const totalDist = targetTrack.totalDist;
+  const eles = targetTrack.points.map(p=>p.ele);
+  const eMin = Math.min(...eles), eMax = Math.max(...eles);
+  const x = d => padL + (d/totalDist)*(W-padL-padR);
+  const y = e => padT + (1-(e-eMin)/(eMax-eMin||1))*(H-padT-padB);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" id="profileSvg">`;
+  // baseline grid (elevation)
+  for(let i=0;i<=4;i++){
+    const e = eMin + (eMax-eMin)*i/4;
+    svg += `<line x1="${padL}" y1="${y(e).toFixed(1)}" x2="${W-padR}" y2="${y(e).toFixed(1)}" stroke="#2c342e" stroke-width="1"/>`;
+    svg += `<text x="${padL-8}" y="${(y(e)+3).toFixed(1)}" fill="#5b645a" font-size="10" font-family="JetBrains Mono" text-anchor="end">${Math.round(e)}m</text>`;
+  }
+
+  // colored segments as filled area under curve
+  for(let i=0;i<segments.length;i++){
+    const s = segments[i];
+    const x1 = x(s.distStart), x2 = x(s.distEnd);
+    const e1 = targetTrack.points.find(()=>true); // not used
+    const yTop1 = y(i===0? targetTrack.points[0].ele : segments[i-1].ele);
+    const yTop2 = y(s.ele);
+    const color = paceColor(s.pace, baselinePaceSecPerKm);
+    svg += `<polygon data-i="${i}" points="${x1.toFixed(1)},${yTop1.toFixed(1)} ${x2.toFixed(1)},${yTop2.toFixed(1)} ${x2.toFixed(1)},${H-padB} ${x1.toFixed(1)},${H-padB}" fill="${color}" fill-opacity="0.75"/>`;
+  }
+  // outline
+  let outline = '';
+  targetTrack.points.forEach((p,i)=>{ outline += (i===0?'M':'L') + x(p.dist).toFixed(1) + ' ' + y(p.ele).toFixed(1) + ' '; });
+  svg += `<path d="${outline}" fill="none" stroke="#eae7dd" stroke-width="1" stroke-opacity="0.5"/>`;
+
+  for(let i=0;i<=4;i++){
+    const d = totalDist*i/4;
+    svg += `<text x="${x(d).toFixed(1)}" y="${H-padB+16}" fill="#5b645a" font-size="10" font-family="JetBrains Mono" text-anchor="middle">${(d/1000).toFixed(1)}km</text>`;
+  }
+
+  svg += `</svg>`;
+  const container = document.getElementById('profileChart');
+  container.innerHTML = svg;
+
+  // tooltip interaction
+  const tooltip = document.getElementById('tooltip');
+  container.querySelectorAll('polygon').forEach(poly=>{
+    poly.addEventListener('mousemove', ev=>{
+      const i = parseInt(poly.getAttribute('data-i'));
+      const s = segments[i];
+      tooltip.innerHTML = (s.distEnd/1000).toFixed(2)+' km · pend. '+(s.grade*100).toFixed(1)+'% · ritmo '+fmtPace(s.pace)+'/km · acum. '+fmtTime(s.cumTime*riegelFactor);
+      tooltip.style.left = (ev.pageX+14)+'px';
+      tooltip.style.top = (ev.pageY-10)+'px';
+      tooltip.style.opacity = 1;
+    });
+    poly.addEventListener('mouseleave', ()=>{ tooltip.style.opacity=0; });
+  });
+}
+
+function renderSplitsTable(segments, riegelFactor){
+  const body = document.getElementById('splitsBody');
+  body.innerHTML='';
+  const totalDist = targetTrack.totalDist;
+  const kmMarks = Math.ceil(totalDist/1000);
+  let segIdx=0;
+  let prevCumTime = 0, prevCumDist = 0;
+
+  for(let km=1; km<=kmMarks; km++){
+    const markDist = Math.min(km*1000, totalDist);
+    // find cumTime at markDist by interpolation over segments
+    while(segIdx < segments.length-1 && segments[segIdx].cumDist < markDist) segIdx++;
+    const s = segments[Math.min(segIdx, segments.length-1)];
+    const cumTimeAtMark = s.cumTime * riegelFactor;
+    const splitDist = markDist - prevCumDist;
+    const splitTime = cumTimeAtMark - prevCumTime;
+    const splitPace = (splitTime/splitDist)*1000;
+
+    // avg grade over this km: elevation change / distance
+    const startEleIdx = targetTrack.points.findIndex(p=>p.dist>=prevCumDist);
+    const endEleIdx = targetTrack.points.findIndex(p=>p.dist>=markDist);
+    const eleStart = targetTrack.points[Math.max(0,startEleIdx)]?.ele ?? 0;
+    const eleEnd = targetTrack.points[endEleIdx===-1?targetTrack.points.length-1:endEleIdx]?.ele ?? eleStart;
+    const gainKm = eleEnd - eleStart;
+    const avgGrade = (gainKm/splitDist)*100;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${km}</td><td>${fmtPace(splitPace)}</td><td>${fmtTime(splitTime)}</td><td>${fmtTime(cumTimeAtMark)}</td>
+      <td class="${gainKm>=0?'grade-up':'grade-down'}">${gainKm>=0?'+':''}${Math.round(gainKm)}m</td>
+      <td class="${avgGrade>=0?'grade-up':'grade-down'}">${avgGrade>=0?'+':''}${avgGrade.toFixed(1)}%</td>`;
+    body.appendChild(tr);
+
+    prevCumTime = cumTimeAtMark;
+    prevCumDist = markDist;
+  }
+}
+</script>
+</body>
+</html>
