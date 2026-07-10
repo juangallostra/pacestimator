@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="app.title">Ritmo de Sendero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="header-top">
+      <div class="eyebrow" data-i18n="app.title">Ritmo de Sendero</div>
+      <select id="langSelect" class="lang-select" aria-label="Idioma / Idioma / Language">
+        <option value="es">Español</option>
+        <option value="ca">Català</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <h1 data-i18n="app.h1">Estimador de ritmo por desnivel</h1>
+    <div class="sub" data-i18n="app.sub">Calcula tu ritmo equivalente en llano a partir de tus últimos entrenos y lo aplica al perfil de un track objetivo, tramo a tramo.</div>
+  </header>
+
+  <!-- STEP 1: TRAINING GPX UPLOADS -->
+  <section>
+    <div class="step-tag" data-i18n="step1.tag">Paso 1</div>
+    <h2 data-i18n="step1.title">Sube tus entrenos</h2>
+    <p class="desc" data-i18n="step1.desc">Arrastra varios GPX de tus últimas salidas (cuantas más, mejor calibrado saldrá tu ritmo base). Necesitan llevar marcas de tiempo por punto — casi cualquier reloj o app de running las incluye al exportar.</p>
+    <div class="bin-size-control">
+      <span data-i18n="step1.gradeWindowLabel">Ventana lineal para calcular la pendiente:</span>
+      <select id="gradeWindowSelect">
+        <option value="5" data-i18n="step1.gradeWindowOpt5">5 m</option>
+        <option value="10" data-i18n="step1.gradeWindowOpt10">10 m</option>
+        <option value="20" selected data-i18n="step1.gradeWindowOpt20">20 m (por defecto)</option>
+        <option value="50" data-i18n="step1.gradeWindowOpt50">50 m</option>
+        <option value="100" data-i18n="step1.gradeWindowOpt100">100 m</option>
+      </select>
+    </div>
+    <p class="footnote" style="margin-top:-6px; margin-bottom:14px;" data-i18n="step1.gradeWindowFootnote">
+      La pendiente de cada tramo se calcula comparando la elevación al principio y al final de una ventana de esta longitud a lo largo del track (no entre cada dos puntos GPS consecutivos, que suelen estar a 1-5 m). Ventanas más cortas dan más detalle pero son más sensibles al ruido de altímetro; ventanas más largas suavizan ese ruido pero difuminan cambios de pendiente cortos (por ejemplo, un repecho de 10 m dentro de una ventana de 50 m puede diluirse).
+    </p>
+    <div class="dropzone" id="trainingDropzone">
+      <div data-i18n="step1.dropzoneText"><strong>Arrastra tus archivos .gpx aquí</strong> o haz clic para seleccionarlos (puedes elegir varios a la vez)</div>
+      <input type="file" id="trainingInput" accept=".gpx" multiple style="display:none;">
+    </div>
+    <div class="hint" data-i18n="step1.hint">Cómo exportar GPX con tiempos: en Strava, entra en el entreno → menú "···" → Exportar GPX. En Garmin Connect, Coros, Suunto o COROS App hay una opción equivalente en cada actividad.</div>
+    <div class="status" id="trainingStatus"></div>
+    <div class="activity-list" id="activityList"></div>
+    <div class="row" id="clearTrainingRow" style="display:none; margin-top:10px;">
+      <button class="secondary" id="clearTrainingBtn" data-i18n="step1.clearBtn">Vaciar todos los entrenos</button>
+    </div>
+
+    <div class="stat-grid" id="baselineStats" style="display:none;">
+      <div class="stat">
+        <div class="label" data-i18n="step1.statBaseline">Ritmo llano equivalente</div>
+        <div class="value" id="statBaseline">–</div>
+      </div>
+      <div class="stat">
+        <div class="label" data-i18n="step1.statRuns">Entrenos analizados</div>
+        <div class="value" id="statRuns">–</div>
+      </div>
+      <div class="stat">
+        <div class="label" data-i18n="step1.statDist">Distancia analizada</div>
+        <div class="value" id="statDist">–</div>
+      </div>
+      <div class="stat">
+        <div class="label" data-i18n="step1.statLongest">Tirada más larga</div>
+        <div class="value" id="statLongest">–</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="gapChartWrap" style="display:none;">
+      <div class="chart-title" data-i18n="step1.chartTitle">Tu curva de esfuerzo — ritmo real vs. pendiente</div>
+      <div class="bin-size-control">
+        <span data-i18n="step1.binLabel">Ventana de agrupación para el gráfico (% de pendiente):</span>
+        <select id="binSizeSelect">
+          <option value="0.01" data-i18n="step1.binOpt1">1%</option>
+          <option value="0.02" selected data-i18n="step1.binOpt2">2% (por defecto)</option>
+          <option value="0.03" data-i18n="step1.binOpt3">3%</option>
+          <option value="0.05" data-i18n="step1.binOpt5">5%</option>
+        </select>
+      </div>
+      <p class="desc" style="margin-bottom:14px;" data-i18n="step1.chartDesc">
+        Cada <strong style="color:var(--moss);">punto verde</strong> es tu ritmo real mediano en los tramos de entreno que tenían esa pendiente aproximada — cuanto más grande el punto, más tramos hay con esa pendiente (más fiable). El eje horizontal es la <strong>pendiente</strong> (negativo = bajada, positivo = subida); el eje vertical es tu <strong>ritmo</strong> en min/km, y va al revés de lo intuitivo: más abajo en el gráfico = más rápido. Las dos líneas no son datos tuyos, son lo que predice cada modelo teórico para cada pendiente a partir de tu ritmo llano medio — cuanto más cerca pasen de tus puntos verdes, mejor describe ese modelo tu forma de correr.
+      </p>
+      <div id="gapChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--moss);"></i><span data-i18n="step1.legendObserved">Ritmo observado por tramo (mediana por bin de pendiente)</span></span>
+        <span><i style="background:var(--ochre);"></i><span data-i18n="step1.legendMinetti">Minetti (2002) — modelo usado para la estimación</span></span>
+        <span><i style="background:#7d8fae;"></i><span data-i18n="step1.legendAcsm">ACSM — modelo de referencia alternativo</span></span>
+      </div>
+      <div class="footnote" id="gapFitStats" style="margin-top:12px;"></div>
+      <div class="footnote" style="margin-top:4px;" data-i18n="step1.hoverHint">💡 Pasa el ratón por cualquier punto de las líneas naranja o azulada para ver el cálculo exacto del ritmo predicho en esa pendiente.</div>
+
+      <details class="explain">
+        <summary data-i18n="step1.explainSummary">¿De dónde sale tu ritmo llano equivalente, y qué tan bien ajusta?</summary>
+        <div class="explain-body" data-i18n="step1.explainBody">
+          <p><strong>Cómo se construye el gráfico, paso a paso:</strong></p>
+          <p>Cada entreno se divide en miles de tramos muy cortos (punto GPS a punto GPS). Para cada tramo se calcula la <strong>pendiente</strong> (desnivel ÷ distancia) y el <strong>ritmo real</strong> que llevabas en ese instante. Luego se agrupan todos los tramos en "cajones" de pendiente (por defecto de 2% de ancho: de -2% a 0%, de 0% a 2%, de 2% a 4%, etc.) y dentro de cada cajón se toma la <strong>mediana</strong> del ritmo — eso es cada punto verde del gráfico. Solo se dibujan cajones con al menos 3 tramos, para no pintar puntos poco fiables basados en uno o dos datos sueltos.</p>
+          <p>El ancho de ese cajón ("ventana de agrupación", en % de pendiente) es configurable con el selector de arriba del gráfico. Es un compromiso: un cajón <strong>estrecho</strong> (1%) da más resolución y detecta cambios de ritmo más finos entre pendientes parecidas, pero tiene menos tramos dentro y el punto resultante es más ruidoso (y algunos cajones pueden quedarse sin los 3 tramos mínimos y no dibujarse). Un cajón <strong>ancho</strong> (5%) da puntos más estables porque promedia más datos, pero mezcla pendientes que pueden ser bastante distintas entre sí. 2% suele ser un buen punto de partida salvo que tengas muy pocos o muchísimos datos.</p>
+          <p><strong>Ojo, esto es distinto de la "ventana lineal" del Paso 1:</strong> esta ventana de aquí solo agrupa puntos ya calculados para dibujar el gráfico y medir el ajuste (en % de pendiente). La ventana lineal del Paso 1 (en metros) es anterior en la cadena: decide cómo se calcula cada pendiente individual a partir del GPX crudo, comparando la elevación al principio y al final de un tramo de esa longitud sobre el terreno — es la que responde a "¿estás calculando la pendiente entre cada dos puntos del GPX, o sobre una distancia mayor?". Cambiar la ventana lineal cambia qué tramos existen; cambiar este cajón solo cambia cómo se agrupan para el gráfico.</p>
+          <p>Correr cuesta arriba o cuesta abajo no gasta la misma energía que en llano a igualdad de ritmo. Para "traducir" cada tramo a su equivalente en llano, esta app usa la ecuación de coste metabólico de <strong>Minetti et al. (2002)</strong>, el modelo de referencia más citado en biomecánica de carrera y el que mejor captura el sobrecoste de frenado en bajadas pronunciadas:</p>
+          <p><code>C(i) = 155.4·i⁵ − 30.4·i⁴ − 43.3·i³ + 46.3·i² + 19.5·i + 3.6</code></p>
+          <p>Con esa curva de coste, el ritmo real de cada tramo se reescala a "lo que costaría ese mismo esfuerzo en llano": <code>ritmo_llano = ritmo_real × C(0) / C(pendiente)</code>. Tu <strong>ritmo llano equivalente</strong> final es la media de todos esos tramos, ponderada por la distancia de cada uno — así los entrenos largos pesan más que uno corto de recuperación. Esa cifra es la que ves arriba del todo, en "Ritmo llano equivalente", y es el punto de partida (grado 0%) del que salen las dos líneas del gráfico: se dibujan aplicando <code>C(pendiente)/C(0)</code> de cada modelo a ese ritmo base, para cada valor de pendiente entre -30% y +30%.</p>
+          <p><strong>De dónde sale exactamente cada punto de la línea naranja:</strong> para cualquier pendiente, se calcula <code>C(pendiente)</code> con la fórmula de Minetti, se divide entre <code>C(0)=3.6</code> (el coste en llano) para obtener un ratio, y ese ratio multiplica tu ritmo llano equivalente. Con tus datos actuales, así queda para varias pendientes de ejemplo:</p>
+          <div id="gapWorkedExample"></div>
+          <p style="margin-top:10px;">Por eso la curva no es una línea recta: <code>C(i)</code> es un polinomio de grado 5, así que crece más rápido en pendientes muy pronunciadas (subir o bajar un tramo muy inclinado penaliza desproporcionadamente más que uno suave) y tiene su mínimo ligeramente por debajo del 0% — bajar un poco suele costar algo menos de energía que ir en llano, según el modelo.</p>
+          <p><strong>¿Cómo de bien ajusta cada modelo?</strong> Debajo del gráfico se muestran dos métricas por modelo, calculadas comparando cada línea contra tus propios puntos verdes:</p>
+          <ul>
+            <li><strong>Desviación media</strong>: el error medio en % entre lo que predice el modelo y tu ritmo real observado, cajón a cajón. Un 8% significa que, en promedio, el modelo se equivoca por 8 de cada 100 segundos de tu ritmo real en esa pendiente.</li>
+            <li><strong>R²</strong>: va de 0 a 1 (a veces puede salir negativo). Indica qué proporción de las diferencias de ritmo entre pendientes explica el modelo. Un R² de 0.85 es un buen ajuste; cerca de 0 o negativo significa que el modelo no está describiendo bien cómo cambia tu ritmo con la pendiente en tu caso concreto.</li>
+          </ul>
+          <p><strong>Modelo de referencia alternativo — ACSM:</strong> además de Minetti, se dibuja la ecuación de la American College of Sports Medicine (<code>VO₂ = 0.2·v + 0.9·v·pendiente + 3.5</code>), muy usada en fisiología del ejercicio por su sencillez. Es lineal, así que no captura el frenado extra en bajadas pronunciadas, y varios estudios (p. ej. Fikes et al., 1999) han encontrado que sobreestima el coste real de correr — se muestra solo como referencia de comparación, no se usa para calcular tu estimación.</p>
+          <p><strong>Para quien quiera profundizar:</strong> un estudio reciente (Looney, Hoogkamer &amp; Kram, <em>European Journal of Applied Physiology</em>, 2026) actualiza y compara varios modelos —incluyendo Minetti y ACSM— con un conjunto de datos mucho mayor, y propone las ecuaciones RE3/HTK como mejora adicional, especialmente en bajada. No están implementadas aquí por no tener sus coeficientes exactos confirmados, pero es la referencia más actual si buscas ir más allá de Minetti.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="confidence-card" id="runnerProfileCard" style="display:none;">
+      <div class="confidence-head">
+        <div class="title" data-i18n="step1.profileTitle">Perfil de corredor — puntos fuertes y a mejorar</div>
+      </div>
+      <p class="desc" style="margin-bottom:14px;" data-i18n="step1.profileDesc">
+        En cada franja de pendiente, "<strong>% vs. modelo</strong>" compara tu ritmo real medio con el que predice el modelo a partir de tu propio ritmo llano — no te compara con otros corredores. Un <strong style="color:var(--ochre);">+15%</strong> significa que en esa pendiente vas un 15% más lento de lo que tu propio nivel general haría esperar (posible punto débil); un <strong style="color:var(--moss);">-10%</strong> significa que vas un 10% más rápido de lo esperado (punto fuerte relativo).
+      </p>
+      <div class="footnote" id="runnerProfileSummary" style="margin-top:0; margin-bottom:16px;"></div>
+      <div id="runnerProfileZones"></div>
+      <div class="footnote" id="runnerProfileTargetNote" style="margin-top:16px;"></div>
+      <details class="explain" style="margin-top:16px;">
+        <summary data-i18n="step1.profileExplainSummary">¿Cómo se calcula esto?</summary>
+        <div class="explain-body" data-i18n="step1.profileExplainBody">
+          <p>Tus tramos de entreno se agrupan en 5 franjas de pendiente. En cada una se compara tu ritmo real medio con el que predice el modelo de Minetti a partir de tu ritmo llano equivalente — es decir, "lo que te tocaría" en esa pendiente si tu rendimiento fuera igual de eficiente en toda la gama de pendientes.</p>
+          <p>Si en una franja vas más lento de lo que el modelo predice, esa franja te cuesta relativamente más que al corredor "estándar" que describe la ecuación — una señal de margen de mejora específico de terreno (técnica, fuerza, confianza), no necesariamente de forma física general. Si vas más rápido de lo esperado, es un punto fuerte relativo.</p>
+          <p>Franjas con menos de 1 km analizado se muestran igualmente pero con el aviso de que hay poco dato para fiarse del número.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 2: GPX -->
+  <section>
+    <div class="step-tag" data-i18n="step2.tag">Paso 2</div>
+    <h2 data-i18n="step2.title">Sube el track objetivo</h2>
+    <p class="desc" data-i18n="step2.desc">El GPX de la carrera o ruta que quieres estimar. No necesita tiempos, solo el trazado con elevación. Todo se procesa en tu navegador.</p>
+    <div class="dropzone" id="dropzone">
+      <div data-i18n="step2.dropzoneText"><strong>Arrastra tu archivo .gpx aquí</strong> o haz clic para seleccionarlo</div>
+      <input type="file" id="gpxInput" accept=".gpx" style="display:none;">
+    </div>
+    <div class="status" id="gpxStatus"></div>
+
+    <div class="row" id="targetActionsRow" style="display:none; margin-top:14px;">
+      <button class="secondary" id="removeTargetBtn" data-i18n="step2.removeBtn">Quitar track objetivo</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: RESULTS -->
+  <section id="resultsSection" style="display:none;">
+    <div class="step-tag" data-i18n="step3.tag">Paso 3</div>
+    <h2 data-i18n="step3.title">Estimación</h2>
+    <p class="desc" data-i18n="step3.desc">Ritmo y tiempo estimados aplicando tu curva de esfuerzo al perfil del track objetivo.</p>
+
+    <div class="result-hero">
+      <div>
+        <div class="label" data-i18n="step3.resultTimeLabel">Tiempo estimado</div>
+        <div class="big" id="resultTime">–</div>
+      </div>
+      <div>
+        <div class="label" data-i18n="step3.resultPaceLabel">Ritmo medio</div>
+        <div class="big" id="resultPace">–<span>/km</span></div>
+      </div>
+      <div>
+        <div class="label" data-i18n="step3.resultDistLabel">Distancia · D+ · D-</div>
+        <div class="big" id="resultDist" style="font-size:24px; margin-top:10px;">–</div>
+      </div>
+    </div>
+
+    <div class="confidence-card" id="confidenceCard">
+      <div class="confidence-head">
+        <div class="title" data-i18n="step3.confidenceTitle">Nivel de confianza de la estimación</div>
+        <div class="score" id="confScoreLabel">–</div>
+      </div>
+      <div class="confidence-bar-track"><div class="confidence-bar-fill" id="confScoreBar"></div></div>
+      <div id="confFactors"></div>
+      <details class="explain" style="margin-top:16px;">
+        <summary data-i18n="step3.confidenceExplainSummary">¿Cómo se calcula la confianza?</summary>
+        <div class="explain-body" data-i18n="step3.confidenceExplainBody">
+          <p>No es una probabilidad estadística formal, sino un indicador orientativo que combina cuatro señales sobre cuánto puedes fiarte del número de arriba:</p>
+          <ul>
+            <li><strong>Volumen de datos</strong>: cuántos km de entrenos has analizado. Con pocos km, el ritmo base está mal calibrado.</li>
+            <li><strong>Cobertura de pendientes</strong>: qué parte del track objetivo transcurre por pendientes que ya has corrido antes. En tramos con pendientes que nunca has entrenado, el modelo extrapola con la curva de Minetti sin datos reales que la contrasten.</li>
+            <li><strong>Ajuste del modelo</strong>: cuánto se parece la curva teórica a tu ritmo real observado por pendiente (ver el gráfico del Paso 1). Si tu forma de correr cuestas se aleja mucho del modelo estándar, la confianza baja.</li>
+            <li><strong>Extrapolación de distancia</strong>: si la carrera es mucho más larga que tu tirada más larga analizada, el ajuste de fatiga (Riegel) es más especulativo.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <details class="explain">
+      <summary data-i18n="step3.calcExplainSummary">¿Cómo se calcula el tiempo estimado?</summary>
+      <div class="explain-body" data-i18n="step3.calcExplainBody">
+        <p>El track objetivo también se divide en tramos punto a punto. A cada tramo se le aplica tu ritmo llano equivalente ajustado por su pendiente concreta (la misma ecuación de Minetti, pero ahora en sentido inverso: <code>ritmo_tramo = ritmo_llano × C(pendiente) / C(0)</code>), y se suman los tiempos de todos los tramos.</p>
+        <p>Si la distancia del track objetivo supera claramente tu tirada más larga analizada, se añade un pequeño recargo de fatiga (escalado tipo <strong>fórmula de Riegel</strong>, exponente 1.06) sobre el tiempo total — el razonamiento es que mantener el ritmo se hace progresivamente más difícil cuanto más dura el esfuerzo, más allá de lo que ya recoge el modelo de pendiente. Debajo de la tabla se indica si se aplicó y con qué factor.</p>
+        <p>El <strong>ritmo medio</strong> es simplemente el tiempo total dividido entre la distancia total del track.</p>
+
+      </div>
+    </details>
+
+    <div class="chart-wrap">
+      <div class="chart-title" data-i18n="step3.profileChartTitle">Perfil de elevación — color = intensidad estimada</div>
+      <div id="profileChart" style="position:relative;"></div>
+      <div class="legend">
+        <span><i style="background:var(--moss);"></i><span data-i18n="step3.legendFaster">Más rápido que tu ritmo base</span></span>
+        <span><i style="background:var(--text-muted);"></i><span data-i18n="step3.legendBase">≈ ritmo base</span></span>
+        <span><i style="background:var(--ochre);"></i><span data-i18n="step3.legendSlower">Más lento (subida exigente)</span></span>
+      </div>
+      <details class="explain">
+        <summary data-i18n="step3.colorsExplainSummary">¿Qué significan los colores?</summary>
+        <div class="explain-body" data-i18n="step3.colorsExplainBody">
+          <p>Cada franja del perfil es un tramo del track objetivo, coloreado según el ritmo estimado para ese tramo comparado con tu ritmo llano equivalente: verde donde el modelo predice que irás más rápido que tu base (bajadas suaves, terreno favorable), gris donde el esfuerzo es similar al llano, y naranja/rojo en las subidas más exigentes, donde el ritmo se ralentiza más.</p>
+          <p>Pasa el ratón por encima de cualquier punto del perfil para ver la pendiente, el ritmo estimado y el tiempo acumulado hasta ese punto exacto.</p>
+        </div>
+      </details>
+    </div>
+
+    <table id="splitsTable">
+      <thead>
+        <tr>
+          <th data-i18n="step3.thKm">Km</th>
+          <th data-i18n="step3.thPace">Ritmo</th>
+          <th data-i18n="step3.thSegTime">Tiempo tramo</th>
+          <th data-i18n="step3.thElapsed">Acumulado</th>
+          <th data-i18n="step3.thGain">D+</th>
+          <th data-i18n="step3.thGrade">Pend. media</th>
+        </tr>
+      </thead>
+      <tbody id="splitsBody"></tbody>
+    </table>
+    <details class="explain">
+      <summary data-i18n="step3.columnsExplainSummary">¿Qué significa cada columna?</summary>
+      <div class="explain-body" data-i18n="step3.columnsExplainBody">
+        <ul>
+          <li><strong>Km</strong>: marca kilométrica sobre el track objetivo (no sobre tus entrenos).</li>
+          <li><strong>Ritmo</strong>: ritmo estimado medio durante ese kilómetro concreto, ya ajustado a su desnivel.</li>
+          <li><strong>Tiempo tramo</strong>: tiempo estimado para recorrer solo ese kilómetro.</li>
+          <li><strong>Acumulado</strong>: tiempo total estimado desde la salida hasta el final de ese kilómetro.</li>
+          <li><strong>D+</strong>: desnivel positivo ganado durante ese kilómetro.</li>
+          <li><strong>Pend. media</strong>: pendiente media de ese kilómetro (desnivel neto ÷ distancia).</li>
+        </ul>
+      </div>
+    </details>
+
+    <div class="footnote" id="riegelNote"></div>
+    <div class="footnote" data-i18n="step3.disclaimer">Es una estimación fisiológica (modelo de Minetti, 2002), no una predicción exacta: no tiene en cuenta terreno técnico, nutrición, clima del día de carrera ni tu estado de forma puntual.</div>
+  </section>
+
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
