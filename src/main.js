@@ -44,16 +44,6 @@ function fmtTime(totalSec){
   if(h>0) return h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
   return m+'m '+String(s).padStart(2,'0')+'s';
 }
-function smoothArray(arr, window){
-  const out = [];
-  const half = Math.floor(window/2);
-  for(let i=0;i<arr.length;i++){
-    let sum=0,count=0;
-    for(let j=Math.max(0,i-half); j<=Math.min(arr.length-1,i+half); j++){ sum+=arr[j]; count++; }
-    out.push(sum/count);
-  }
-  return out;
-}
 function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function setStatus(el, msg, cls){ el.className='status '+(cls||''); el.textContent = msg; }
 
@@ -336,7 +326,12 @@ function parseTrainingGpx(text){
 
   const rawSegs = [];
   let cumDist = 0, gainUp = 0;
-  const NOISE_FLOOR_M = 0.25; // very light — just damps single-point GPS jitter (affects distance, not grade)
+  // GPS noise floor: a watch/phone GPS drifts a few meters even when stationary
+  // (aid-station stops, traffic lights), and at 1Hz that drift adds up over
+  // thousands of points. Anchoring distance accumulation to the last point that
+  // cleared this threshold rejects that drift far better than smoothing the
+  // raw lat/lon does, especially while stopped.
+  const NOISE_FLOOR_M = 5;
 
   for(const segPts of trkSegs){
     const raw = segPts.map(pt=>({
@@ -345,17 +340,17 @@ function parseTrainingGpx(text){
       ele: pt.querySelector('ele') ? parseFloat(pt.querySelector('ele').textContent) : 0,
       time: Date.parse(pt.querySelector('time').textContent)
     }));
-    const sLat = smoothArray(raw.map(p=>p.lat), 3);
-    const sLon = smoothArray(raw.map(p=>p.lon), 3);
 
     const localPts = [{dist:0, ele: raw[0].ele, time: raw[0].time/1000}];
     let localDist = 0;
+    let anchorLat = raw[0].lat, anchorLon = raw[0].lon;
     for(let i=1;i<raw.length;i++){
-      const dDist = haversine(sLat[i-1], sLon[i-1], sLat[i], sLon[i]);
       const dEle = raw[i].ele - raw[i-1].ele;
       if(dEle>0) gainUp += dEle;
-      if(dDist <= NOISE_FLOOR_M) continue;
+      const dDist = haversine(anchorLat, anchorLon, raw[i].lat, raw[i].lon);
+      if(dDist < NOISE_FLOOR_M) continue;
       localDist += dDist;
+      anchorLat = raw[i].lat; anchorLon = raw[i].lon;
       localPts.push({dist: localDist, ele: raw[i].ele, time: raw[i].time/1000});
     }
     if(localPts.length>=2){
@@ -723,7 +718,9 @@ function parseTargetGpx(text){
   let cumDist = 0, gainUp=0, gainDown=0;
   const points = [];
   const rawSegs = [];
-  const NOISE_FLOOR_M = 0.25; // very light — just damps single-point GPS jitter (affects distance, not grade)
+  // See parseTrainingGpx: anchor-based noise floor rejects GPS drift (including
+  // while stopped) far better than smoothing the raw lat/lon does.
+  const NOISE_FLOOR_M = 5;
 
   for(const segPts of trkSegs){
     const raw = segPts.map(pt=>{
@@ -734,21 +731,21 @@ function parseTargetGpx(text){
         ele: eleEl ? parseFloat(eleEl.textContent) : 0
       };
     });
-    const sLat = smoothArray(raw.map(p=>p.lat), 3);
-    const sLon = smoothArray(raw.map(p=>p.lon), 3);
 
     if(points.length===0) points.push({dist:0, ele: raw[0].ele, lat: raw[0].lat, lon: raw[0].lon});
 
     const segOffset = cumDist;
     const localPts = [{dist:0, ele: raw[0].ele}];
     let localDist = 0;
+    let anchorLat = raw[0].lat, anchorLon = raw[0].lon;
     for(let i=1;i<raw.length;i++){
-      const d = haversine(sLat[i-1], sLon[i-1], sLat[i], sLon[i]);
-      if(d <= NOISE_FLOOR_M) continue;
-      cumDist += d;
-      localDist += d;
       const dEle = raw[i].ele - raw[i-1].ele;
       if(dEle>0) gainUp+=dEle; else gainDown+=-dEle;
+      const d = haversine(anchorLat, anchorLon, raw[i].lat, raw[i].lon);
+      if(d < NOISE_FLOOR_M) continue;
+      cumDist += d;
+      localDist += d;
+      anchorLat = raw[i].lat; anchorLon = raw[i].lon;
       points.push({dist: cumDist, ele: raw[i].ele, lat: raw[i].lat, lon: raw[i].lon});
       localPts.push({dist: localDist, ele: raw[i].ele});
     }
