@@ -6,7 +6,7 @@ const STORAGE_KEY = 'ritmoSendero.lang';
 const translations = {
   es: {
     app: {
-      title: `Ritmo de Sendero`,
+      title: `Pace Estimator`,
       h1: `Estimador de ritmo por desnivel`,
       sub: `Calcula tu ritmo equivalente en llano a partir de tus últimos entrenos y lo aplica al perfil de un track objetivo, tramo a tramo.`
     },
@@ -28,6 +28,24 @@ const translations = {
       statRuns: `Entrenos analizados`,
       statDist: `Distancia analizada`,
       statLongest: `Tirada más larga`,
+      similarityLabel: `Peso por similitud con la carrera objetivo:`,
+      similarityOpt0: `0% (todos los entrenos pesan igual)`,
+      similarityOpt25: `25%`,
+      similarityOpt50: `50% (por defecto)`,
+      similarityOpt75: `75%`,
+      similarityOpt100: `100% (prioriza fuerte los entrenos más parecidos)`,
+      similarityFootnote: `Solo calcula similitud una vez subas el track objetivo (Paso 2) — pasa el ratón por el peso de cada entreno en la lista de arriba para ver su % de similitud. Ese peso es editable a mano en cualquier momento (junto al icono "↺"): escribe un valor para forzarlo, o pulsa "↺" para volver al automático.`,
+      similarityExplainSummary: `¿Cómo se calcula la similitud con la carrera objetivo, y qué hace el peso editable?`,
+      similarityExplainBody: `
+        <p>Cada entreno y la carrera objetivo se resumen como un <strong>histograma de pendientes</strong>: qué porcentaje de su distancia total transcurre en cada cajón de pendiente (mismo ancho de cajón que el gráfico de esfuerzo de más abajo). Un entreno de montaña con mucha subida y bajada fuerte tendrá un histograma muy distinto al de una tirada llana de asfalto.</p>
+        <p>La similitud de cada entreno es la <strong>intersección</strong> de su histograma con el de la carrera objetivo (la suma, cajón a cajón, del mínimo entre ambos porcentajes) — va de 0% (ningún solape de terreno) a 100% (perfil de pendientes prácticamente idéntico).</p>
+        <p>El peso automático de cada entreno combina esa similitud con el selector de arriba: al 0% todos los entrenos pesan igual (como si no existiera esta función); al 100% el peso de cada entreno es casi directamente su similitud (con un mínimo del 10% para que ningún entreno desaparezca del todo, por si acaso resulta útil igualmente). Valores intermedios son una mezcla entre ambos extremos.</p>
+        <p>Junto a cada entreno de la lista hay un campo de peso editable: si escribes un valor ahí, ese número manda sobre el automático (útil si, por ejemplo, sabes que corriste un entreno con piernas cansadas y quieres que pese menos, o quieres forzar que uno concreto cuente el doble). El icono "↺" borra tu valor manual y vuelve al cálculo automático.</p>
+        <p>Este peso (automático o manual) afecta al <strong>ritmo llano equivalente</strong> (Paso 1) y al indicador de <strong>volumen de datos</strong> y <strong>cobertura de pendientes</strong> del nivel de confianza (Paso 3) — pero no al perfil de corredor por franjas, que se calcula siempre sin ponderar para que siga reflejando tu rendimiento real en cada tipo de pendiente, no solo el relevante para esta carrera.</p>
+      `,
+      weightInputTitle: `Peso de este entreno en el cálculo del ritmo base (1 = normal). Escribe un valor para forzarlo manualmente.`,
+      weightInputTitleWithSimilarity: `Similitud con la carrera objetivo: {pct}%. Peso de este entreno en el cálculo del ritmo base (1 = normal) — escribe un valor para forzarlo manualmente.`,
+      weightResetTitle: `Volver al peso automático`,
       chartTitle: `Tu curva de esfuerzo — ritmo real vs. pendiente`,
       binLabel: `Ventana de agrupación para el gráfico (% de pendiente):`,
       binOpt1: `1%`,
@@ -238,7 +256,7 @@ const translations = {
 
   ca: {
     app: {
-      title: `Ritmo de Sendero`,
+      title: `Pace Estimator`,
       h1: `Estimador de ritme segons el desnivell`,
       sub: `Calcula el teu ritme equivalent en pla a partir dels teus últims entrenaments i l'aplica al perfil d'un track objectiu, tram a tram.`
     },
@@ -260,6 +278,24 @@ const translations = {
       statRuns: `Entrenaments analitzats`,
       statDist: `Distància analitzada`,
       statLongest: `Tirada més llarga`,
+      similarityLabel: `Pes per similitud amb la cursa objectiu:`,
+      similarityOpt0: `0% (tots els entrenaments pesen igual)`,
+      similarityOpt25: `25%`,
+      similarityOpt50: `50% (per defecte)`,
+      similarityOpt75: `75%`,
+      similarityOpt100: `100% (prioritza fort els entrenaments més semblants)`,
+      similarityFootnote: `Només calcula similitud un cop pugis el track objectiu (Pas 2) — passa el ratolí pel pes de cada entrenament a la llista de dalt per veure'n el % de similitud. Aquest pes és editable a mà en qualsevol moment (al costat de la icona "↺"): escriu un valor per forçar-lo, o prem "↺" per tornar a l'automàtic.`,
+      similarityExplainSummary: `Com es calcula la similitud amb la cursa objectiu, i què fa el pes editable?`,
+      similarityExplainBody: `
+        <p>Cada entrenament i la cursa objectiu es resumeixen com un <strong>histograma de pendents</strong>: quin percentatge de la seva distància total transcorre en cada calaix de pendent (mateixa amplada de calaix que el gràfic d'esforç de més avall). Un entrenament de muntanya amb molta pujada i baixada forta tindrà un histograma molt diferent del d'una tirada plana d'asfalt.</p>
+        <p>La similitud de cada entrenament és la <strong>intersecció</strong> del seu histograma amb el de la cursa objectiu (la suma, calaix a calaix, del mínim entre ambdós percentatges) — va de 0% (cap solapament de terreny) a 100% (perfil de pendents pràcticament idèntic).</p>
+        <p>El pes automàtic de cada entrenament combina aquesta similitud amb el selector de dalt: al 0% tots els entrenaments pesen igual (com si no existís aquesta funció); al 100% el pes de cada entrenament és gairebé directament la seva similitud (amb un mínim del 10% perquè cap entrenament desaparegui del tot, per si de cas resulta útil igualment). Valors intermedis són una barreja entre ambdós extrems.</p>
+        <p>Al costat de cada entrenament de la llista hi ha un camp de pes editable: si hi escrius un valor, aquest número mana sobre l'automàtic (útil si, per exemple, saps que vas córrer un entrenament amb cames cansades i vols que pesi menys, o vols forçar que un en concret compti el doble). La icona "↺" esborra el teu valor manual i torna al càlcul automàtic.</p>
+        <p>Aquest pes (automàtic o manual) afecta el <strong>ritme pla equivalent</strong> (Pas 1) i l'indicador de <strong>volum de dades</strong> i <strong>cobertura de pendents</strong> del nivell de confiança (Pas 3) — però no el perfil de corredor per franges, que es calcula sempre sense ponderar perquè continuï reflectint el teu rendiment real en cada tipus de pendent, no només el rellevant per a aquesta cursa.</p>
+      `,
+      weightInputTitle: `Pes d'aquest entrenament en el càlcul del ritme base (1 = normal). Escriu un valor per forçar-lo manualment.`,
+      weightInputTitleWithSimilarity: `Similitud amb la cursa objectiu: {pct}%. Pes d'aquest entrenament en el càlcul del ritme base (1 = normal) — escriu un valor per forçar-lo manualment.`,
+      weightResetTitle: `Tornar al pes automàtic`,
       chartTitle: `La teva corba d'esforç — ritme real vs. pendent`,
       binLabel: `Finestra d'agrupació per al gràfic (% de pendent):`,
       binOpt1: `1%`,
@@ -470,7 +506,7 @@ const translations = {
 
   en: {
     app: {
-      title: `Ritmo de Sendero`,
+      title: `Pace Estimator`,
       h1: `Grade-adjusted pace estimator`,
       sub: `Calculates your flat-equivalent pace from your recent training runs and applies it to a target track's elevation profile, segment by segment.`
     },
@@ -492,6 +528,24 @@ const translations = {
       statRuns: `Runs analyzed`,
       statDist: `Distance analyzed`,
       statLongest: `Longest run`,
+      similarityLabel: `Weight by similarity to the target race:`,
+      similarityOpt0: `0% (every run weighs the same)`,
+      similarityOpt25: `25%`,
+      similarityOpt50: `50% (default)`,
+      similarityOpt75: `75%`,
+      similarityOpt100: `100% (strongly favor the most similar runs)`,
+      similarityFootnote: `Similarity is only computed once you upload the target track (Step 2) — hover each run's weight in the list above to see its similarity %. That weight is directly editable at any time (next to the "↺" icon): type a value to force it, or hit "↺" to go back to automatic.`,
+      similarityExplainSummary: `How is similarity to the target race calculated, and what does the editable weight do?`,
+      similarityExplainBody: `
+        <p>Each training run and the target race are summarized as a <strong>grade histogram</strong>: what percentage of their total distance falls in each grade bin (same bin width as the effort-curve chart below). A mountain run with lots of steep climbing and descending will have a very different histogram from a flat road run.</p>
+        <p>A run's similarity is the <strong>intersection</strong> of its histogram with the target race's (the sum, bin by bin, of the smaller of the two percentages) — it ranges from 0% (no shared terrain at all) to 100% (near-identical grade profile).</p>
+        <p>Each run's automatic weight blends that similarity with the selector above: at 0% every run weighs the same (as if this feature didn't exist); at 100% each run's weight is nearly its raw similarity (with a 10% floor so no run ever fully disappears, in case it's still useful). Values in between blend the two extremes.</p>
+        <p>Next to each run in the list there's an editable weight field: type a value there and it overrides the automatic one (useful if, say, you know a run was on tired legs and want it to count less, or you want to force a particular run to count double). The "↺" icon clears your manual value and goes back to the automatic calculation.</p>
+        <p>This weight (automatic or manual) affects the <strong>flat-equivalent pace</strong> (Step 1) and the confidence score's <strong>data volume</strong> and <strong>grade coverage</strong> factors (Step 3) — but not the per-band runner profile, which is always computed unweighted so it keeps reflecting your real performance on every grade, not just the ones relevant to this particular race.</p>
+      `,
+      weightInputTitle: `This run's weight in the base-pace calculation (1 = normal). Type a value to override it manually.`,
+      weightInputTitleWithSimilarity: `Similarity to the target race: {pct}%. This run's weight in the base-pace calculation (1 = normal) — type a value to override it manually.`,
+      weightResetTitle: `Reset to automatic weight`,
       chartTitle: `Your effort curve — real pace vs. grade`,
       binLabel: `Bin width for the chart (% grade):`,
       binOpt1: `1%`,

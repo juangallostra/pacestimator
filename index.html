@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title data-i18n="app.title">Ritmo de Sendero</title>
+<title data-i18n="app.title">Pace Estimator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/src/style.css">
@@ -13,7 +13,7 @@
 
   <header>
     <div class="header-top">
-      <div class="eyebrow" data-i18n="app.title">Ritmo de Sendero</div>
+      <div class="eyebrow" data-i18n="app.title">Pace Estimator</div>
       <select id="langSelect" class="lang-select" aria-label="Idioma / Idioma / Language">
         <option value="es">Español</option>
         <option value="ca">Català</option>
@@ -52,6 +52,30 @@
     <div class="row" id="clearTrainingRow" style="display:none; margin-top:10px;">
       <button class="secondary" id="clearTrainingBtn" data-i18n="step1.clearBtn">Vaciar todos los entrenos</button>
     </div>
+
+    <div class="bin-size-control">
+      <span data-i18n="step1.similarityLabel">Peso por similitud con la carrera objetivo:</span>
+      <select id="similarityStrengthSelect">
+        <option value="0" data-i18n="step1.similarityOpt0">0% (todos los entrenos pesan igual)</option>
+        <option value="0.25" data-i18n="step1.similarityOpt25">25%</option>
+        <option value="0.5" selected data-i18n="step1.similarityOpt50">50% (por defecto)</option>
+        <option value="0.75" data-i18n="step1.similarityOpt75">75%</option>
+        <option value="1" data-i18n="step1.similarityOpt100">100% (prioriza fuerte los entrenos más parecidos)</option>
+      </select>
+    </div>
+    <p class="footnote" style="margin-top:-6px; margin-bottom:14px;" data-i18n="step1.similarityFootnote">
+      Solo calcula similitud una vez subas el track objetivo (Paso 2) — pasa el ratón por el peso de cada entreno en la lista de arriba para ver su % de similitud. Ese peso es editable a mano en cualquier momento (junto al icono "↺"): escribe un valor para forzarlo, o pulsa "↺" para volver al automático.
+    </p>
+    <details class="explain" style="margin-top:-6px; margin-bottom:14px;">
+      <summary data-i18n="step1.similarityExplainSummary">¿Cómo se calcula la similitud con la carrera objetivo, y qué hace el peso editable?</summary>
+      <div class="explain-body" data-i18n="step1.similarityExplainBody">
+        <p>Cada entreno y la carrera objetivo se resumen como un <strong>histograma de pendientes</strong>: qué porcentaje de su distancia total transcurre en cada cajón de pendiente (mismo ancho de cajón que el gráfico de esfuerzo de más abajo). Un entreno de montaña con mucha subida y bajada fuerte tendrá un histograma muy distinto al de una tirada llana de asfalto.</p>
+        <p>La similitud de cada entreno es la <strong>intersección</strong> de su histograma con el de la carrera objetivo (la suma, cajón a cajón, del mínimo entre ambos porcentajes) — va de 0% (ningún solape de terreno) a 100% (perfil de pendientes prácticamente idéntico).</p>
+        <p>El peso automático de cada entreno combina esa similitud con el selector de arriba: al 0% todos los entrenos pesan igual (como si no existiera esta función); al 100% el peso de cada entreno es casi directamente su similitud (con un mínimo del 10% para que ningún entreno desaparezca del todo, por si acaso resulta útil igualmente). Valores intermedios son una mezcla entre ambos extremos.</p>
+        <p>Junto a cada entreno de la lista hay un campo de peso editable: si escribes un valor ahí, ese número manda sobre el automático (útil si, por ejemplo, sabes que corriste un entreno con piernas cansadas y quieres que pese menos, o quieres forzar que uno concreto cuente el doble). El icono "↺" borra tu valor manual y vuelve al cálculo automático.</p>
+        <p>Este peso (automático o manual) afecta al <strong>ritmo llano equivalente</strong> (Paso 1) y al indicador de <strong>volumen de datos</strong> y <strong>cobertura de pendientes</strong> del nivel de confianza (Paso 3) — pero no al perfil de corredor por franjas, que se calcula siempre sin ponderar para que siga reflejando tu rendimiento real en cada tipo de pendiente, no solo el relevante para esta carrera.</p>
+      </div>
+    </details>
 
     <div class="stat-grid" id="baselineStats" style="display:none;">
       <div class="stat">

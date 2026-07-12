@@ -129,16 +129,47 @@ function buildWindowedSegments(rawSegs, windowM, needPace){
   return segments;
 }
 
+// Normalizes an array of {grade, dist} segments into a distance-fraction
+// histogram over grade bins — e.g. {-1: 0.12, 0: 0.40, 1: 0.30, ...} where
+// each key is round(grade/binSize) and each value is that bin's share of
+// the total distance. Used to compare the "shape" of a track's terrain
+// (how much of it is steep climb vs. flat vs. descent) independent of how
+// long the track actually is.
+function buildGradeHistogram(segments, binSize){
+  const hist = {};
+  let total = 0;
+  for(const seg of segments){
+    const g = clamp(seg.grade, -0.30, 0.30);
+    const key = Math.round(g/binSize);
+    hist[key] = (hist[key]||0) + seg.dist;
+    total += seg.dist;
+  }
+  if(total>0){ for(const k in hist) hist[k] /= total; }
+  return hist;
+}
+
+// Histogram intersection: sum of min(a[bin],b[bin]) over every bin either
+// histogram touches. 1 = identical terrain shape, 0 = no shared grades at
+// all (e.g. an entirely flat training run vs. an entirely uphill race).
+function histogramOverlap(a, b){
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  let overlap = 0;
+  for(const k of keys) overlap += Math.min(a[k]||0, b[k]||0);
+  return overlap;
+}
+
 // ---------- STATE ----------
 let baselinePaceSecPerKm = null;
 let GRADE_BIN_SIZE = 0.02; // width of each grade "bin" (2% default) — configurable in the UI
 let GRADE_WINDOW_M = 20; // linear-distance window (meters) used to compute grade itself — configurable in the UI
+let SIMILARITY_STRENGTH = 0.5; // 0 = every training km counts equally, 1 = weighted hard by grade-profile similarity to the target race
 const KEY_POINT_MIN_ELEVATION_M = 30; // minimum prominence for a summit/valley to count as an "emblematic" point
 let gradeSegments = []; // {grade, actualPaceSecPerKm, dist} — derived from trainingFiles
 let usedActivities = []; // {name, dist} — derived from trainingFiles
 let trainingFiles = []; // {id, name, dist, gainUp, segments} — source of truth for step 1
 let trainingFileSeq = 0;
 let targetTrack = null; // {points:[{dist,ele,lat,lon}], totalDist, gainUp, gainDown}
+let currentFileWeights = {}; // {trainingFileId: weight} — set by computeBaseline(), consumed by the confidence score and activity-list badges
 
 // ---------- STEP 1: TRAINING GPX UPLOADS ----------
 const trainingDropzone = document.getElementById('trainingDropzone');
@@ -206,7 +237,7 @@ async function handleTrainingFiles(fileList){
         addOrReplaceRow(existing.id, file.name, (parsed.totalDist/1000).toFixed(1)+' km · D+'+Math.round(parsed.gainUp)+'m', false);
       }else{
         const id = 'tf'+(trainingFileSeq++);
-        trainingFiles.push({id, name: file.name, dist: parsed.totalDist, gainUp: parsed.gainUp, rawSegs: parsed.rawSegs, segments});
+        trainingFiles.push({id, name: file.name, dist: parsed.totalDist, gainUp: parsed.gainUp, rawSegs: parsed.rawSegs, segments, manualWeight: null});
         addedCount++;
         addOrReplaceRow(id, file.name, (parsed.totalDist/1000).toFixed(1)+' km · D+'+Math.round(parsed.gainUp)+'m', false);
       }
@@ -264,6 +295,7 @@ function refreshTrainingDerived(){
 
   if(gradeSegments.length < 20){
     baselinePaceSecPerKm = null;
+    currentFileWeights = {};
     document.getElementById('baselineStats').style.display='none';
     document.getElementById('gapChartWrap').style.display='none';
     document.getElementById('runnerProfileCard').style.display='none';
@@ -272,6 +304,7 @@ function refreshTrainingDerived(){
     renderGapChart();
     renderRunnerProfile();
   }
+  renderActivityWeightControls();
   maybeShowResults();
 }
 
@@ -341,21 +374,116 @@ function windowSegmentsForTrainingFile(rawSegs){
     .map(s => ({ grade: s.grade, actualPaceSecPerKm: s.actualPaceSecPerKm, dist: s.dist }));
 }
 
+// Per-training-file weight for the baseline calculation. The automatic part:
+// without a target track (or with the strength slider at 0%) every file
+// weighs 1, i.e. the classic unweighted average. With a target loaded, each
+// file's automatic weight is blended between 1 and its own grade-histogram
+// similarity to the target — the strength slider controls how much of that
+// blend comes from similarity vs. flat 1-per-file. On top of that, a file
+// with f.manualWeight set (user-edited in the activity list) always wins
+// over the automatic value — it's an explicit override, not another input
+// to the blend.
+const MIN_SIMILARITY_WEIGHT = 0.1; // floor so a very dissimilar file still counts a little, rather than vanishing at 100% strength
+function computeFileWeights(){
+  const autoWeights = {};
+  if(!targetTrack || SIMILARITY_STRENGTH<=0){
+    for(const f of trainingFiles) autoWeights[f.id] = 1;
+  }else{
+    const targetSegs = buildWindowedSegments(targetTrack.rawSegs, GRADE_WINDOW_M, false);
+    const targetHist = buildGradeHistogram(targetSegs, GRADE_BIN_SIZE);
+    for(const f of trainingFiles){
+      const fileHist = buildGradeHistogram(f.segments, GRADE_BIN_SIZE);
+      const similarity = histogramOverlap(fileHist, targetHist);
+      f._lastSimilarity = similarity;
+      autoWeights[f.id] = (1-SIMILARITY_STRENGTH) + SIMILARITY_STRENGTH*Math.max(similarity, MIN_SIMILARITY_WEIGHT);
+    }
+  }
+  const weights = {};
+  for(const f of trainingFiles){
+    f._autoWeight = autoWeights[f.id];
+    weights[f.id] = (f.manualWeight!=null && isFinite(f.manualWeight)) ? f.manualWeight : autoWeights[f.id];
+  }
+  return weights;
+}
+
 function computeBaseline(){
+  currentFileWeights = computeFileWeights();
   let weightedSum = 0, weightTotal = 0;
-  for(const seg of gradeSegments){
-    const flatEquivPace = seg.actualPaceSecPerKm * (C0 / minettiCost(seg.grade));
-    weightedSum += flatEquivPace * seg.dist;
-    weightTotal += seg.dist;
+  for(const f of trainingFiles){
+    const w = currentFileWeights[f.id] ?? 1;
+    for(const seg of f.segments){
+      const flatEquivPace = seg.actualPaceSecPerKm * (C0 / minettiCost(seg.grade));
+      weightedSum += flatEquivPace * seg.dist * w;
+      weightTotal += seg.dist * w;
+    }
   }
   baselinePaceSecPerKm = weightedSum / weightTotal;
 
   document.getElementById('baselineStats').style.display='grid';
   document.getElementById('statBaseline').innerHTML = fmtPace(baselinePaceSecPerKm)+' <span>/km</span>';
   document.getElementById('statRuns').textContent = usedActivities.length;
-  document.getElementById('statDist').innerHTML = (weightTotal/1000).toFixed(1)+' <span>km</span>';
+  document.getElementById('statDist').innerHTML = (gradeSegments.reduce((s,seg)=>s+seg.dist,0)/1000).toFixed(1)+' <span>km</span>';
   const longest = Math.max(...usedActivities.map(a=>a.dist));
   document.getElementById('statLongest').innerHTML = (longest/1000).toFixed(1)+' <span>km</span>';
+}
+
+// Renders, on each training file's row: an informational "similarity NN%"
+// weight input per row, letting the user override the automatic weight
+// outright — a typed value wins over both the flat default and the
+// similarity blend until reset. The similarity % (when available) is only
+// surfaced as the input's tooltip, not as separate on-row text, to keep
+// the list visually quiet. Re-renders in place rather than rebuilding the
+// row, so it doesn't fight the user while they're actively typing.
+function renderActivityWeightControls(){
+  for(const f of trainingFiles){
+    const row = activityListEl.querySelector('[data-id="'+f.id+'"]');
+    if(!row) continue;
+    const actions = row.querySelector('.row-actions');
+    const delBtn = actions.querySelector('.del-btn');
+
+    let weightWrap = row.querySelector('.weight-control');
+    if(!weightWrap){
+      weightWrap = document.createElement('span');
+      weightWrap.className = 'weight-control';
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.05';
+      input.min = '0';
+      input.className = 'weight-input';
+      input.addEventListener('change', ()=>{
+        const v = parseFloat(input.value);
+        f.manualWeight = (isFinite(v) && v>=0) ? v : null;
+        maybeShowResults();
+        renderActivityWeightControls();
+      });
+
+      const resetBtn = document.createElement('button');
+      resetBtn.type = 'button';
+      resetBtn.className = 'weight-reset';
+      resetBtn.textContent = '↺';
+      resetBtn.title = t('step1.weightResetTitle');
+      resetBtn.addEventListener('click', ()=>{
+        f.manualWeight = null;
+        maybeShowResults();
+        renderActivityWeightControls();
+      });
+
+      weightWrap.appendChild(input);
+      weightWrap.appendChild(resetBtn);
+      actions.insertBefore(weightWrap, delBtn || null);
+    }
+
+    const input = weightWrap.querySelector('.weight-input');
+    const isManual = f.manualWeight!=null;
+    const effectiveW = isManual ? f.manualWeight : (f._autoWeight ?? 1);
+    if(document.activeElement !== input) input.value = effectiveW.toFixed(2);
+    input.title = (targetTrack && SIMILARITY_STRENGTH>0)
+      ? t('step1.weightInputTitleWithSimilarity', {pct: Math.round((f._lastSimilarity ?? 1)*100)})
+      : t('step1.weightInputTitle');
+    weightWrap.classList.toggle('manual', isManual);
+    weightWrap.querySelector('.weight-reset').style.display = isManual ? 'inline-block' : 'none';
+  }
 }
 
 // Goodness-of-fit of a model curve `costFn` (with its own costFn(0) baseline)
@@ -390,6 +518,11 @@ document.getElementById('binSizeSelect').addEventListener('change', e=>{
     renderGapChart();
     maybeShowResults(); // confidence card's grade-coverage/fit scores also depend on GRADE_BIN_SIZE
   }
+});
+
+document.getElementById('similarityStrengthSelect').addEventListener('change', e=>{
+  SIMILARITY_STRENGTH = parseFloat(e.target.value);
+  if(gradeSegments.length>=20) maybeShowResults();
 });
 
 function renderGapChart(){
@@ -626,6 +759,13 @@ function parseTargetGpx(text){
 
 // ---------- STEP 3: RESULTS ----------
 function maybeShowResults(){
+  // Baseline weights depend on the target track's grade profile, so any
+  // target change (load/remove) needs a fresh weighted baseline too — not
+  // just a training-file change.
+  if(gradeSegments.length>=20){
+    computeBaseline();
+    renderActivityWeightControls();
+  }
   if(baselinePaceSecPerKm && targetTrack){
     computeAndRenderResults();
   }else{
@@ -881,17 +1021,24 @@ function renderRunnerProfile(){
 function computeConfidence(targetSegments, riegelFactor){
   const binSize = GRADE_BIN_SIZE;
 
-  // 1) data volume
-  const totalTrainedKm = gradeSegments.reduce((s,seg)=>s+seg.dist,0)/1000;
-  const volumeScore = clamp((totalTrainedKm/60)*100, 0, 100);
+  // 1) data volume — weighted by similarity to the target race, so km from
+  // a very dissimilar training run count for less here too (not just in
+  // the baseline pace itself)
+  const weightedTrainedKm = trainingFiles.reduce((s,f)=>
+    s + f.segments.reduce((s2,seg)=>s2+seg.dist,0) * (currentFileWeights[f.id] ?? 1), 0) / 1000;
+  const volumeScore = clamp((weightedTrainedKm/60)*100, 0, 100);
 
   // 2) grade coverage: how much of the target distance falls in grade bins
-  // that are meaningfully represented in the training data
+  // that are meaningfully represented in the training data (weighted, same
+  // reasoning as above)
   const trainedDistByBin = {};
-  for(const seg of gradeSegments){
-    const g = clamp(seg.grade, -0.30, 0.30);
-    const key = Math.round(g/binSize);
-    trainedDistByBin[key] = (trainedDistByBin[key]||0) + seg.dist;
+  for(const f of trainingFiles){
+    const w = currentFileWeights[f.id] ?? 1;
+    for(const seg of f.segments){
+      const g = clamp(seg.grade, -0.30, 0.30);
+      const key = Math.round(g/binSize);
+      trainedDistByBin[key] = (trainedDistByBin[key]||0) + seg.dist*w;
+    }
   }
   const COVERAGE_THRESHOLD_M = 150;
   let coveredDist = 0, totalTargetDist = 0;
@@ -905,7 +1052,10 @@ function computeConfidence(targetSegments, riegelFactor){
   const coverageScore = totalTargetDist > 0 ? (coveredDist/totalTargetDist)*100 : 0;
 
   // 3) model fit: mean absolute % error between the Minetti curve and the
-  // runner's own median observed pace, per grade bin (bins with n>=3 only)
+  // runner's own median observed pace, per grade bin (bins with n>=3 only).
+  // Deliberately left unweighted by similarity — properly weighting a
+  // median needs a weighted-median, not just weighted sums, for limited
+  // extra signal here.
   const binsForFit = {};
   for(const seg of gradeSegments){
     const g = clamp(seg.grade, -0.30, 0.30);
@@ -939,7 +1089,7 @@ function computeConfidence(targetSegments, riegelFactor){
     overall, label, colorVar,
     factors: [
       { name:t('confidence.factorVolume.name'), score: volumeScore,
-        note: t('confidence.factorVolume.note', {km: totalTrainedKm.toFixed(0), n: usedActivities.length}) },
+        note: t('confidence.factorVolume.note', {km: weightedTrainedKm.toFixed(0), n: usedActivities.length}) },
       { name:t('confidence.factorCoverage.name'), score: coverageScore,
         note: t('confidence.factorCoverage.note', {pct: Math.round(coverageScore)}) },
       { name:t('confidence.factorFit.name'), score: fitScore,
