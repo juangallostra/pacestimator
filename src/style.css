@@ -1,25 +1,26 @@
 :root{
-    --bg:#121613;
-    --bg-alt:#0d100e;
-    --panel:#1b211d;
-    --panel-2:#212823;
-    --line:#2c342e;
-    --moss:#7fa66c;
-    --moss-dim:#5c7d4f;
-    --ochre:#c98a3b;
-    --ochre-dim:#96682e;
-    --ember:#c9613f;
-    --text:#eae7dd;
-    --text-muted:#8a9489;
-    --text-faint:#5b645a;
+    --bg:#f7f5ef;
+    --bg-alt:#efece1;
+    --panel:#ffffff;
+    --panel-2:#f1eee4;
+    --line:#ddd6c6;
+    --moss:#4c7a3a;
+    --moss-dim:#7fa66c;
+    --ochre:#a35f1f;
+    --ochre-dim:#c98a3b;
+    --ember:#b23e22;
+    --slate:#5c6f92;
+    --text:#232821;
+    --text-muted:#565f52;
+    --text-faint:#7a8272;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     background:var(--bg);
     background-image:
-      radial-gradient(circle at 15% 0%, rgba(127,166,108,0.06), transparent 45%),
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 34px);
+      radial-gradient(circle at 15% 0%, rgba(76,122,58,0.05), transparent 45%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 34px);
     color:var(--text);
     font-family:'Inter', sans-serif;
     line-height:1.5;
@@ -84,7 +85,7 @@
     font-weight:600;
     font-size:14px;
     background:var(--moss);
-    color:#0d130e;
+    color:#ffffff;
     border:none;
     padding:12px 20px;
     border-radius:6px;
@@ -164,9 +165,9 @@
   .legend i{width:10px; height:10px; border-radius:2px; display:inline-block;}
 
   .tooltip{
-    position:absolute; pointer-events:none; background:#0a0d0b; border:1px solid var(--line);
+    position:absolute; pointer-events:none; background:var(--text); border:1px solid var(--line);
     border-radius:6px; padding:8px 10px; font-family:'JetBrains Mono', monospace; font-size:11px;
-    color:var(--text); white-space:nowrap; opacity:0; transition:opacity 0.1s; z-index:10;
+    color:var(--bg); white-space:nowrap; opacity:0; transition:opacity 0.1s; z-index:10;
   }
 
   table{width:100%; border-collapse:collapse; margin-top:20px; font-size:13px;}

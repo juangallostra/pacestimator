@@ -559,20 +559,20 @@ function renderGapChart(){
   const yTickCount = 5;
   for(let i=0;i<=yTickCount;i++){
     const p = pMin + (pMax-pMin)*i/yTickCount;
-    svg += `<line x1="${padL}" y1="${y(p).toFixed(1)}" x2="${W-padR}" y2="${y(p).toFixed(1)}" stroke="#2c342e" stroke-width="1"/>`;
-    svg += `<text x="${padL-8}" y="${(y(p)+3).toFixed(1)}" fill="#5b645a" font-size="10" font-family="JetBrains Mono" text-anchor="end">${fmtPace(p)}</text>`;
+    svg += `<line x1="${padL}" y1="${y(p).toFixed(1)}" x2="${W-padR}" y2="${y(p).toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;
+    svg += `<text x="${padL-8}" y="${(y(p)+3).toFixed(1)}" fill="var(--text-faint)" font-size="10" font-family="JetBrains Mono" text-anchor="end">${fmtPace(p)}</text>`;
   }
   // Y axis title
-  svg += `<text x="${14}" y="${padT+(H-padT-padB)/2}" fill="#5b645a" font-size="10" font-family="JetBrains Mono" text-anchor="middle" transform="rotate(-90 14 ${padT+(H-padT-padB)/2})">min/km</text>`;
+  svg += `<text x="${14}" y="${padT+(H-padT-padB)/2}" fill="var(--text-faint)" font-size="10" font-family="JetBrains Mono" text-anchor="middle" transform="rotate(-90 14 ${padT+(H-padT-padB)/2})">min/km</text>`;
 
   for(let g=-0.3; g<=0.3+1e-9; g+=0.1){
-    svg += `<line x1="${x(g)}" y1="${padT}" x2="${x(g)}" y2="${H-padB}" stroke="#2c342e" stroke-width="1"/>`;
-    svg += `<text x="${x(g)}" y="${H-padB+18}" fill="#5b645a" font-size="11" font-family="JetBrains Mono" text-anchor="middle">${Math.round(g*100)}%</text>`;
+    svg += `<line x1="${x(g)}" y1="${padT}" x2="${x(g)}" y2="${H-padB}" stroke="var(--line)" stroke-width="1"/>`;
+    svg += `<text x="${x(g)}" y="${H-padB+18}" fill="var(--text-faint)" font-size="11" font-family="JetBrains Mono" text-anchor="middle">${Math.round(g*100)}%</text>`;
   }
-  svg += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#2c342e"/>`;
-  svg += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}" stroke="#2c342e"/>`;
+  svg += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="var(--line)"/>`;
+  svg += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}" stroke="var(--line)"/>`;
   // X axis title
-  svg += `<text x="${padL+(W-padL-padR)/2}" y="${H-4}" fill="#5b645a" font-size="10" font-family="JetBrains Mono" text-anchor="middle">${t('chart.gradeAxis')}</text>`;
+  svg += `<text x="${padL+(W-padL-padR)/2}" y="${H-4}" fill="var(--text-faint)" font-size="10" font-family="JetBrains Mono" text-anchor="middle">${t('chart.gradeAxis')}</text>`;
 
   // ACSM curve (dashed, drawn first so Minetti + dots sit on top)
   let acsmPath='';
@@ -581,7 +581,7 @@ function renderGapChart(){
     const p = baselinePaceSecPerKm * acsmCost(g)/ACSM_C0;
     acsmPath += (gi===0?'M':'L') + x(g).toFixed(1) + ' ' + y(p).toFixed(1) + ' ';
   }
-  svg += `<path d="${acsmPath}" fill="none" stroke="#7d8fae" stroke-width="2" stroke-dasharray="5,4"/>`;
+  svg += `<path d="${acsmPath}" fill="none" stroke="var(--slate)" stroke-width="2" stroke-dasharray="5,4"/>`;
 
   // Minetti curve
   let modelPath='';
@@ -590,7 +590,7 @@ function renderGapChart(){
     const p = baselinePaceSecPerKm * minettiCost(g)/C0;
     modelPath += (gi===0?'M':'L') + x(g).toFixed(1) + ' ' + y(p).toFixed(1) + ' ';
   }
-  svg += `<path d="${modelPath}" fill="none" stroke="#c98a3b" stroke-width="2.5"/>`;
+  svg += `<path d="${modelPath}" fill="none" stroke="var(--ochre)" stroke-width="2.5"/>`;
 
   // hoverable markers every 5% along each curve — lets you check the exact
   // predicted pace (and how it was computed) at any grade, not just eyeball it
@@ -598,12 +598,12 @@ function renderGapChart(){
     const gr = Math.round(g*100)/100;
     const pM = baselinePaceSecPerKm * minettiCost(gr)/C0;
     const pA = baselinePaceSecPerKm * acsmCost(gr)/ACSM_C0;
-    svg += `<circle class="gap-hover" data-model="minetti" data-grade="${gr}" cx="${x(gr).toFixed(1)}" cy="${y(pM).toFixed(1)}" r="6" fill="#c98a3b" fill-opacity="0.16" stroke="none" style="cursor:pointer;"/>`;
-    svg += `<circle class="gap-hover" data-model="acsm" data-grade="${gr}" cx="${x(gr).toFixed(1)}" cy="${y(pA).toFixed(1)}" r="6" fill="#7d8fae" fill-opacity="0.14" stroke="none" style="cursor:pointer;"/>`;
+    svg += `<circle class="gap-hover" data-model="minetti" data-grade="${gr}" cx="${x(gr).toFixed(1)}" cy="${y(pM).toFixed(1)}" r="6" fill="var(--ochre)" fill-opacity="0.16" stroke="none" style="cursor:pointer;"/>`;
+    svg += `<circle class="gap-hover" data-model="acsm" data-grade="${gr}" cx="${x(gr).toFixed(1)}" cy="${y(pA).toFixed(1)}" r="6" fill="var(--slate)" fill-opacity="0.14" stroke="none" style="cursor:pointer;"/>`;
   }
 
   for(const p of binPoints){
-    svg += `<circle cx="${x(p.grade).toFixed(1)}" cy="${y(p.pace).toFixed(1)}" r="${Math.min(3+p.n*0.3,8)}" fill="#7fa66c" fill-opacity="0.75"/>`;
+    svg += `<circle cx="${x(p.grade).toFixed(1)}" cy="${y(p.pace).toFixed(1)}" r="${Math.min(3+p.n*0.3,8)}" fill="var(--moss-dim)" fill-opacity="0.75"/>`;
   }
 
   svg += `</svg>`;
@@ -641,7 +641,7 @@ function renderGapChart(){
     fitEl.innerHTML =
       '<strong>'+t('chart.fitIntro')+'</strong> '
       + '<span style="color:var(--ochre)">●</span> Minetti — '+t('chart.avgDeviation')+' <strong>'+(minettiFit.mape*100).toFixed(1)+'%</strong>, R² '+(minettiFit.r2!==null?minettiFit.r2.toFixed(2):'–')+
-      ' &nbsp;·&nbsp; <span style="color:#7d8fae">●</span> ACSM — '+t('chart.avgDeviation')+' <strong>'+(acsmFit.mape*100).toFixed(1)+'%</strong>, R² '+(acsmFit.r2!==null?acsmFit.r2.toFixed(2):'–')+
+      ' &nbsp;·&nbsp; <span style="color:var(--slate)">●</span> ACSM — '+t('chart.avgDeviation')+' <strong>'+(acsmFit.mape*100).toFixed(1)+'%</strong>, R² '+(acsmFit.r2!==null?acsmFit.r2.toFixed(2):'–')+
       ' &nbsp;·&nbsp; '+t('chart.fitConclusion', {n: binPoints.length, better});
   }
 
@@ -1117,10 +1117,10 @@ function renderConfidence(conf){
 
 function paceColor(pace, baseline){
   const ratio = pace/baseline;
-  if(ratio < 0.95) return '#7fa66c';
-  if(ratio < 1.05) return '#8a9489';
-  if(ratio < 1.35) return '#c98a3b';
-  return '#c9613f';
+  if(ratio < 0.95) return 'var(--moss)';
+  if(ratio < 1.05) return 'var(--text-muted)';
+  if(ratio < 1.35) return 'var(--ochre)';
+  return 'var(--ember)';
 }
 
 function renderProfileChart(segments, riegelFactor){
@@ -1134,8 +1134,8 @@ function renderProfileChart(segments, riegelFactor){
   let svg = `<svg viewBox="0 0 ${W} ${H}" id="profileSvg">`;
   for(let i=0;i<=4;i++){
     const e = eMin + (eMax-eMin)*i/4;
-    svg += `<line x1="${padL}" y1="${y(e).toFixed(1)}" x2="${W-padR}" y2="${y(e).toFixed(1)}" stroke="#2c342e" stroke-width="1"/>`;
-    svg += `<text x="${padL-8}" y="${(y(e)+3).toFixed(1)}" fill="#5b645a" font-size="10" font-family="JetBrains Mono" text-anchor="end">${Math.round(e)}m</text>`;
+    svg += `<line x1="${padL}" y1="${y(e).toFixed(1)}" x2="${W-padR}" y2="${y(e).toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;
+    svg += `<text x="${padL-8}" y="${(y(e)+3).toFixed(1)}" fill="var(--text-faint)" font-size="10" font-family="JetBrains Mono" text-anchor="end">${Math.round(e)}m</text>`;
   }
 
   for(let i=0;i<segments.length;i++){
@@ -1148,11 +1148,11 @@ function renderProfileChart(segments, riegelFactor){
   }
   let outline = '';
   targetTrack.points.forEach((p,i)=>{ outline += (i===0?'M':'L') + x(p.dist).toFixed(1) + ' ' + y(p.ele).toFixed(1) + ' '; });
-  svg += `<path d="${outline}" fill="none" stroke="#eae7dd" stroke-width="1" stroke-opacity="0.5"/>`;
+  svg += `<path d="${outline}" fill="none" stroke="var(--text)" stroke-width="1" stroke-opacity="0.5"/>`;
 
   for(let i=0;i<=4;i++){
     const d = totalDist*i/4;
-    svg += `<text x="${x(d).toFixed(1)}" y="${H-padB+16}" fill="#5b645a" font-size="10" font-family="JetBrains Mono" text-anchor="middle">${(d/1000).toFixed(1)}km</text>`;
+    svg += `<text x="${x(d).toFixed(1)}" y="${H-padB+16}" fill="var(--text-faint)" font-size="10" font-family="JetBrains Mono" text-anchor="middle">${(d/1000).toFixed(1)}km</text>`;
   }
 
   svg += `</svg>`;
